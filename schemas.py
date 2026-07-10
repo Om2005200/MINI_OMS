@@ -61,6 +61,9 @@ class INTRADAY_ORDERS(SQLModel,table=True):
     ORDER_ID:str
 
 
+    
+
+
 
 
 

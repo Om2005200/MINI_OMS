@@ -28,6 +28,8 @@ class USERACCOUNT(BaseModel):
     EMAIL_ID:str
     CONTACT_NO:int
     PASSWORD:str
+    ACCESS_TOKENS:str
+    REFRESH_TOKENS:str
 
 
 class TOKENS(BaseModel):

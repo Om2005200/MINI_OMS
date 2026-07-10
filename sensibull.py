@@ -7,7 +7,8 @@ from datetime import datetime,timedelta
 import time
 import asyncio
 from  fastapi import FastAPI,APIRouter,HTTPException,status,Depends,BackgroundTasks,Request
-from typing import List
+from typing import List,Annotated
+
 from sqlmodel import select,desc
 from fastapi.responses import JSONResponse
 from sqlmodel import SQLModel
@@ -17,7 +18,8 @@ from sqlmodel import SQLModel
 from sqlalchemy.ext.asyncio import create_async_engine,AsyncSession
 from schemas import USERDATABASE,OVERNINGHT_ORDERS
 from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordRequestForm,OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordRequestForm,OAuth2PasswordBearer,oauth2
+
 import random
 from sqlalchemy.orm import sessionmaker
 import jwt
@@ -33,7 +35,8 @@ router=APIRouter()
 engine=create_async_engine(database_url,echo=True)
 bcrypt_context=CryptContext(schemes=['bcrypt'],deprecated='auto')
 oauth_passowrd=OAuth2PasswordBearer
-
+oauth2_scheme=OAuth2PasswordBearer(tokenUrl='/login')
+#oauth2_scheme_api_endpoint=OAuth2PasswordBearer(tokenUrl='/api')
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
@@ -205,7 +208,8 @@ class MINI_SENSIBULL:
                                 'INSTRUMENT_TYPE':nifty_lot_size*quantity,
                                 'POSITION_TYPE':action,
                                 'CLIENT_ID':master_client_id,
-                                'ORDER_ID':master_order_id
+                                'ORDER_ID':master_order_id,
+                                'ORDER_TYPE':''
                                 
                             }
                             latest_order=await sensibull.state.redis.set('sell_order',json.dumps(new_order))
@@ -238,7 +242,8 @@ class MINI_SENSIBULL:
                                 'INSTRUMENTYPE':sensex_instrumentype,
                                 'POSITION_TYPE':action,
                                 'CLIENT_ID':client_id,
-                                'ORDER_ID':master_order_id
+                                'ORDER_ID':master_order_id,
+                                'ORDER_TYPE':''
                             }
                             return new_order
                 elif stock_name=='BANKNIFTY':
@@ -267,7 +272,8 @@ class MINI_SENSIBULL:
                                 'POSITION_TYPE':action,
                                 'CLIENT_ID':client_id,
                                 'ORDER_ID':master_order_id,
-                                'EXCHANGETOKEN':banknifty_exchangetoken
+                                'EXCHANGETOKEN':banknifty_exchangetoken,
+                                'ORDER_TYPE':''
                             }
                             return pre_order
             elif action=='BUY':
@@ -312,7 +318,8 @@ class MINI_SENSIBULL:
                                 'POSITION_TYPE':action,
                                 'CLIENT_ID':client_id,
                                 'ORDER_ID':master_order_id,
-                                'EXCHANGETOKEN':sell_exchange_token
+                                'EXCHANGETOKEN':sell_exchange_token,
+                                'ORDER_TYPE':''
                             }               
                             return new_sell_order
                         else:
@@ -342,7 +349,8 @@ class MINI_SENSIBULL:
                                 'POSITION_TYPE':'SELL',
                                 'CLIENT_ID':client_id,
                                 'ORDER_ID':master_client_id,
-                                'EXCHANAGE_TOKEN':sensex_sell_exchange_token
+                                'EXCHANAGE_TOKEN':sensex_sell_exchange_token,
+                                'ORDER_TYPE':''
                             }
                             return new_sensex_sell_order
                         else:
@@ -369,9 +377,12 @@ class MINI_SENSIBULL:
                                 'POSITION_TYPE':'SELL',
                                 'CLIENT_ID':master_client_id,
                                 'ORDER_ID':master_order_id,
-                                'EXCHANGE_TOKEN':banknifty_master_exchange_token
+                                'EXCHANGE_TOKEN':banknifty_master_exchange_token,
+                                'ORDER_TYPE':''
                             }
                             return banknifty_sell_order_
+                    
+                        
                         
 
 
@@ -381,22 +392,130 @@ class MINI_SENSIBULL:
         nifty_data_load=json.loads(nifty_main_data)
         getting_the_data=select(OVERNINGHT_ORDERS)
         result=await session.execute(getting_the_data)
-
+        banknifty_main_data_load=await sensibull.state.redis.get('BANKNIFTY')
+        banknifty_data_load=json.loads(banknifty_main_data_load)
+        sensex_data_loading=await sensibull.state.redis.get('SENSEX')
+        sensex_master_data=json.loads(sensex_data_loading)
         all_data=result.scalars().all()
         current_datetime=datetime.now().strftime('%H:%Y')
-        for datas in all_data:
-            client_id=datas.CLIENT_ID
-            strikeprice=datas.STRIKEPRICE
-            expiry=datas.EXPIRY
-            tradingsymbol=datas.TRADINGSYMBOL
-            stock_name=datas.STOCK_NAME
-            entry_price=datas.ENTRY_PRICE
-            exit_price=datas.EXIT_PRICE
-            quantity=datas.QUANTITY
-            status=datas.STATUS
-            positiontype=datas.POSITION_TYPE
-            exchangetoken=datas.EXCHANGETOKEN
-            if 
+        current_date=''
+        if current_datetime=='03:15':
+            for datas in all_data:
+                strikeprice=datas.STRIKEPRICE
+                expiry=datas.EXPIRY
+                tradingsymbol=datas.TRADINGSYMBOL
+                client_id=datas.CLIENT_ID
+                stock_name=datas.STOCK_NAME
+                status_=datas.STATUS
+                position_type=datas.POSITION_TYPE
+                if position_type=='SELL':
+                        
+                    if stock_name=='NIFTY':
+                        nifty_master_data_loading=nifty_data_load('data')
+                        for nifty in nifty_master_data_loading:
+                            nifty_tradingsymbol=nifty['tradingsymbol']
+                            nifty_expiry=nifty['expiry']
+                            if nifty_tradingsymbol==tradingsymbol and status_=='OPEN' and nifty_expiry==current_date:
+                                nifty_expiry_exchangetoken=nifty['exchangetoken']
+                                print('{} POSITION EXPIRING TODAY '.format(nifty))
+                                current_nifty_ltp=self.getting_the_live_prices(nifty_expiry_exchangetoken)
+                                datas.STATUS='CLOSED'
+                                datas.EXIT_PRICE=current_nifty_ltp
+                                datas.EXIT_TIME=current_datetime
+                                datas.POSITION_TYPE='BUY'
+                                return datas
+                    elif stock_name=='BANKNIFTY':
+                        banknifty_data_loading=banknifty_data_load('data')
+                        for banknifty in banknifty_data_loading:
+                            banknifty_strikeprice=banknifty['strikeprice']
+                            banknifty_tradingsymbol=banknifty['tradingsymbol']
+                            banknifty_expiry=banknifty['expiry']
+                            
+                            if tradingsymbol==banknifty_tradingsymbol and status_=='OPEN' and  banknifty_expiry==current_date:
+                                print('{} POSITION AUTO SQAURE OFF DUE TO EXPIRY')
+                                banknifty_master_exchange_token=banknifty['exchangetoken']
+                                banknifty_live_prices=self.getting_the_live_prices(banknifty_master_exchange_token)
+
+                                datas.STATUS=='CLOSED'
+                                datas.EXIT_TIME=current_datetime
+                                datas.EXIT_PRICE=banknifty_live_prices
+                                datas.POSITION_TYPE='BUY'
+                                return datas 
+                            
+                    elif stock_name=='SENSEX':
+                        sensex_=sensex_master_data('data')
+                        for sensex in sensex_:
+                            sensex_tradingsymbol=sensex['tradingsymbol']
+                            sensex_expiry=sensex['expiry']
+                            
+                            if sensex_tradingsymbol==tradingsymbol and status_=='OPEN' and sensex_expiry==current_date:
+                                print('{} POSITION SQAURE OFF DUE TO EXPIRY')
+                                sensex_exchangetoken=sensex['exchangetoken']
+                                sensex_live_ltp=self.getting_the_live_prices(sensex_exchangetoken)
+                                datas.STATUS=='CLOSED'
+                                datas.EXIT_TIME=current_datetime
+                                datas.EXIT_PRICE=sensex_live_ltp
+                                datas.POSITION_TYPE='BUY'
+                                return datas
+                elif position_type=='BUY':
+                    if stock_name=='NIFTY':
+                        nifty_buy_data=nifty_data_load('data') 
+                        for niftys in nifty_buy_data:
+                            niftys_strikeprice=niftys['strikeprice']
+                            niftys_expiry=niftys['expiry']
+                            niftys_tradingsymbol=niftys['tradingsymbol']
+                            #niftys_exchangetoken=niftys['exchangetoken']
+
+                            if niftys_tradingsymbol==tradingsymbol and status_=='OPEN' and niftys_expiry==current_date:
+                                niftys_exchangetoken=niftys['exchangetoken']
+                                niftys_live_prices=self.getting_the_live_prices(niftys_exchangetoken)
+                                datas.EXIT_PRICE=niftys_live_prices
+                                datas.EXIT_TIME=current_datetime
+                                datas.STATUS='CLOSED'
+                                datas.POSITION_TYPE='SELL'
+                                return datas
+                    elif stock_name=='BANKNIFTY':
+                        banknifty_=banknifty_data_load('data')
+                        for buy_banknifty in banknifty_:
+                            buy_banknifty_strikeprice=buy_banknifty['strikeprice']
+                            buy_tradingsymbol=buy_banknifty['tradingsymbol']
+                            buy_expiry=buy_banknifty['expiry']
+                            if buy_tradingsymbol==tradingsymbol and status_=='OPEN' and  buy_expiry==current_date:
+                                current_exchange=buy_banknifty['exchangetoken']
+                                print('{} POSITION AUTO SQAURE OFF DUE TO EXPIRY'.format(datas))
+                                current_price=self.getting_the_live_prices()
+                                datas.STATUS='CLOSED'
+                                datas.EXIT_PRICE=self.getting_the_live_prices(current_price)
+                                datas.EXIT_TIME=current_datetime
+                                datas.POSITION_TYPE='SELL'
+                    elif stock_name=='SENSEX':
+                        sensex_=sensex_master_data('data')
+                        for sensex in sensex_:
+                            sensex_strikeprice=sensex['strikeprice']
+                            sensex_tradingsymbol_=sensex['tradingsymbol']
+                            sensex_master_expiry=sensex['expiry']
+                            if sensex_tradingsymbol_==tradingsymbol and status_=='OPEN' and sensex_master_expiry==current_date:
+                                print('{} POSITION AUTO SQAURE OFF DUE TO EXPIRY')
+                                sensex_buy_exchangetoken=sensex['exchangetoken']
+                                sensex_ltp=self.getting_the_live_prices(sensex_buy_exchangetoken)
+
+                                datas.STATUS='CLOSED'
+                                datas.EXIT_PRICE=sensex_ltp
+                                datas.EXIT_TIME=current_datetime
+                                datas.POSITION_TYPE='SELL'
+                                return datas
+                            
+
+
+                            
+
+                            
+                            
+
+
+
+                    
+
 
 
         
@@ -439,31 +558,69 @@ class SENSIBULL_HELPER:
 
         await session.commit()
         await session.refresh(create_new_user)
+        
         await sensibull.state.redis.set('client_id_set',json.dumps(user_data.CONTACT_NO),ex=1000)
 
         return create_new_user
     
-
-    
-
     async def verify_user(self,user_data:USERACCOUNT,session:AsyncSession):
-        verify_user=select(USERDATABASE).where(USERDATABASE.EMAIL_ID==user_data.EMAIL_ID,USERDATABASE.PASSWORD==bcrypt_context.verify(user_data.PASSWORD))
-        execution=await session.execute(verify_user)
-        result=execution.first()
+        user_verify=select(USERDATABASE).where(USERDATABASE.EMAIL_ID==user_data.EMAIL_ID,USERDATABASE.PASSWORD==user_data.PASSWORD)
+        exceution= await session.execute(user_verify)
+        result=exceution.first(exceution)
         return result
-    
-    async def creating_the_api_key(self,user_data:USERACCOUNT,expires_delta:timedelta,session:AsyncSession):
-        encode={'sub':user_data.EMAIL_ID}
-        expires=datetime.utcnow()+expires_delta
-        encode.update({'exp':expires})
-        return jwt.encode(encode,jwt_key,jwt_algorithm)
+        
     
 
-    async def creating_the_access_token(self,user_data:USERACCOUNT,time:timedelta,session:AsyncSession=Depends(get_session)):
-        encode={'sub':user_data.NAME,'id':user_data.EMAIL_ID}
-        expires=datetime.utcnow()+time
+    async def creating_the_access_token(self,client_name:str,client_email_id:str,expiry:timedelta):
+        encode={'sub':client_name,'email':client_email_id,}
+        expires=datetime.utcnow()+expiry
         encode.update({'exp':expires})
-        return jwt.encode(encode,jwt_key,jwt_algorithm)
+        return jwt.encode(encode,jwt_key,algorithm=jwt_algorithm)
+    
+    async def verify_acces_token(self,user_input:Annotated[str,Depends(oauth2_scheme)]):
+        data_load=jwt.decode(user_input,jwt_key,algorithms=[jwt_algorithm])
+        username:str=data_load.get('sub')
+        # client_no:int=data_load.get('no')
+        client_email_id:str=data_load.get('email')
+        #publishing_date:int=data_load.get('create_date')
+
+        if username  or client_email_id is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='UNAUTHORIZED ACCESS TO THE SYSTEM')
+        
+        return True
+    
+
+    async def creating_the_refresh_token(self,user_data:USERACCOUNT,expiry:timedelta):
+        creation={'sub':user_data.NAME,'client_no':user_data.CONTACT_NO,'email_id':user_data.EMAIL_ID}
+        expiries=datetime.utcnow()+expiry
+        creation.update({'exp':expiries})
+        return jwt.encode(creation,jwt_key,algorithm=jwt_algorithm)
+    
+
+    async def verifying_the_refresh_tokens(self,user_data:USERACCOUNT,expiry:timedelta,session:AsyncSession):
+        refresh_load=jwt.decode(user_data,jwt_key,algorithms=[jwt_algorithm])
+        username:str=refresh_load.get('sub')
+        client_no:int=refresh_load.get('client_no')
+        email_id:str=refresh_load.get('email_id')
+        if (username or client_no or email_id) is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='UNAUTHORIZED ACCESS ')
+        return True
+    
+        
+
+
+    
+
+
+
+        
+
+    
+    
+
+
+
+
 
             
 
@@ -488,37 +645,49 @@ async def user_login(user_data:USERACCOUNT,session:AsyncSession=Depends(get_sess
     user_verify=await helper.verify_user(user_data,session)
     if user_verify is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE LOGIN TO GET THE ACCESS TOKENS ')
-    access_tokens=await helper.creating_the_access_token(user_data,session)
+    access_tokens=await helper.creating_the_access_token(user_data,timedelta(days=1))
     if access_tokens is None:
         raise HTTPException(status_code=status.HTTP_204_NO_CONTENT,detail='UNABLE TO GENERATE THE ACCESS TOKENS ')
+    refresh_tokens=await helper.creating_the_refresh_token(user_data,timedelta(days=365))
+    if refresh_tokens is None:
+        raise HTTPException(status_code=status.HTTP_204_NO_CONTENT,detail='SERVER DOWN PLEASE TRY LATER')
     client_dataset={
         'CLIENT_ID':user_data.CLIENT_ID,
-        'JWT_KEY':access_tokens
+        'ACCESS_TOKENS':access_tokens,
+        'REFRESH_TOKENS':refresh_tokens
     }
     redis_set=await sensibull.state.redis.set('client',json.dumps(client_dataset),ex=4800)
     return JSONResponse(conetent={
-        'ACCESS_TOKEN':access_tokens
+        'ACCESS_TOKEN':access_tokens,
+        'REFRESH_TOKENS':refresh_tokens,
+        'CLIENT_NAME':user_data.NAME,
+        
     })
     
 
 
 @router.post('/place/order')
-async def placing_the_new_orders(orderplace:list[ORDERPLACING],session:AsyncSession=Depends(get_session)):
-    verify_client=await sensibull.state.redis.get('CLIENT')
-    client_load=json.loads(verify_client)
-
-    if client_load is not None:
-        orders=[order.model_dump () for order in orderplace]
-        client_orders=await s.placing_the_orders(orders,session)
-        if client_orders is None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail='NOT ABLE TO PLACE THE ORDERS PLEASE TRY AGAIN AFTER SOMETIME')
-        return client_orders,JSONResponse(content={
-            'STATUS':'ORDER PLACED SUCCESFULLY',
-            'EXCECUTION_TIME':datetime.now().strftime('%H:%Y')
-        })
+async def placing_the_new_orders(orderplace:list[ORDERPLACING],verify_access=Depends(helper.verifying_the_refresh_tokens),verify_refresh=Depends(helper.verifying_the_refresh_tokens),session:AsyncSession=Depends(get_session)):
     
-    else:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE LOGIN TO PLACE THE ORDEERS')
+    if verify_access is not None:
+        if verify_refresh is not None:
+            client_set=await sensibull.state.redis.get('client_id_set')
+            client_set_load=json.loads(client_set)
+
+
+
+            if client_set_load is not None:
+                orders=[order.model_dump () for order in orderplace]
+                client_orders=await s.placing_the_orders(orders,session)
+                if client_orders is None:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail='NOT ABLE TO PLACE THE ORDERS PLEASE TRY AGAIN AFTER SOMETIME')
+                return client_orders,JSONResponse(content={
+                    'STATUS':'ORDER PLACED SUCCESFULLY',
+                    'EXCECUTION_TIME':datetime.now().strftime('%H:%Y')
+                })
+            
+            else:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE LOGIN TO PLACE THE ORDERS')
 
 
 
