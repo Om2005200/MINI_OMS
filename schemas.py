@@ -1,0 +1,66 @@
+from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import select,desc
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine
+import sqlalchemy.dialects.postgresql as pg
+from sqlmodel import create_engine,text,SQLModel,Field,Column
+import uuid
+from sqlalchemy.dialects.postgresql import JSON
+from typing import List,Optional
+
+
+
+class USERDATABASE(SQLModel,table=True):
+    __tablename__='SENSIBULL_ACCOUNT'
+    id:Optional[int]=Field(default=None,primary_key=True)
+    NAME:str
+    EMAIL_ID:str
+    CONTACT_NO:int
+    PASSWORD:str
+
+class OVERNINGHT_ORDERS(SQLModel,table=True):
+    __tablename__='MINI_SENSIBULL'
+    id:Optional[int]=Field(default=None,primary_key=True)
+    TRADINGSYMBOL:str
+    STOCK_NAME:str
+    STRIKEPRICE:str
+    EXPIRY:str
+    QUANTITY:str
+    INSTRUMENTYPE:str
+    POSITION_TYPE:str
+    ENTRY_PRICE:str
+    EXIT_PRICE:str
+    ENTRY_TIME:str
+    EXIT_TIME:str
+    EXIT_PRICE:str
+    TOTAL_INVESTED_AMT:str
+    CLIENT_ID:str
+    ORDER_ID:str
+    STATUS:str
+    EXCHANGETOKEN:str
+
+
+
+class INTRADAY_ORDERS(SQLModel,table=True):
+    __tablename__='MINI_SENSIBULL'
+    id:Optional[int]=Field(default=None,primary_key=True)
+    TRADINGSYMBOL:str
+    STOCK_NAME:str
+    STRIKEPRICE:str
+    EXPIRY:str
+    QUANTITY:str
+    INSTRUMENTYPE:str
+    POSITION_TYPE:str
+    ENTRY_PRICE:str
+    EXIT_PRICE:str
+    ENTRY_TIME:str
+    EXIT_TIME:str
+    EXIT_PRICE:str
+    TOTAL_INVESTED_AMT:str
+    CLIENT_ID:str
+    ORDER_ID:str
+
+
+
+
+
