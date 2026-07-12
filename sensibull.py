@@ -1,14 +1,12 @@
 import requests as rq
 import pandas as pd
 import csv 
-
 import json
 from datetime import datetime,timedelta
 import time
 import asyncio
 from  fastapi import FastAPI,APIRouter,HTTPException,status,Depends,BackgroundTasks,Request
 from typing import List,Annotated
-
 from sqlmodel import select,desc
 from fastapi.responses import JSONResponse
 from sqlmodel import SQLModel
@@ -16,10 +14,9 @@ from models import ORDERPLACING,USERVERIFY,USERACCOUNT,TOKENS
 from concurrent.futures import ProcessPoolExecutor
 from sqlmodel import SQLModel
 from sqlalchemy.ext.asyncio import create_async_engine,AsyncSession
-from schemas import USERDATABASE,OVERNINGHT_ORDERS
+from schemas import USERDATABASE,OVERNIGHT_ORDERS
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordRequestForm,OAuth2PasswordBearer,oauth2
-
 import random
 from sqlalchemy.orm import sessionmaker
 import jwt
@@ -390,7 +387,7 @@ class MINI_SENSIBULL:
     async def processing_the_overnight_orders(self,session:AsyncSession):
         nifty_main_data=await sensibull.state.redis.get('NIFTY')
         nifty_data_load=json.loads(nifty_main_data)
-        getting_the_data=select(OVERNINGHT_ORDERS)
+        getting_the_data=select(OVERNIGHT_ORDERS)
         result=await session.execute(getting_the_data)
         banknifty_main_data_load=await sensibull.state.redis.get('BANKNIFTY')
         banknifty_data_load=json.loads(banknifty_main_data_load)
@@ -504,6 +501,13 @@ class MINI_SENSIBULL:
                                 datas.EXIT_TIME=current_datetime
                                 datas.POSITION_TYPE='SELL'
                                 return datas
+
+
+
+
+                            
+
+
                             
 
 
@@ -688,6 +692,10 @@ async def placing_the_new_orders(orderplace:list[ORDERPLACING],verify_access=Dep
             
             else:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE LOGIN TO PLACE THE ORDERS')
+
+
+
+
 
 
 

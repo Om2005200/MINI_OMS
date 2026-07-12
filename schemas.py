@@ -18,7 +18,7 @@ class USERDATABASE(SQLModel,table=True):
     CONTACT_NO:int
     PASSWORD:str
 
-class OVERNINGHT_ORDERS(SQLModel,table=True):
+class OVERNIGHT_ORDERS(SQLModel,table=True):
     __tablename__='MINI_SENSIBULL'
     id:Optional[int]=Field(default=None,primary_key=True)
     TRADINGSYMBOL:str
@@ -42,7 +42,7 @@ class OVERNINGHT_ORDERS(SQLModel,table=True):
 
 
 class INTRADAY_ORDERS(SQLModel,table=True):
-    __tablename__='MINI_SENSIBULL'
+    __tablename__='INTRADAY_ORDERS'
     id:Optional[int]=Field(default=None,primary_key=True)
     TRADINGSYMBOL:str
     STOCK_NAME:str
@@ -61,7 +61,7 @@ class INTRADAY_ORDERS(SQLModel,table=True):
     ORDER_ID:str
 
 
-    
+
 
 
 
