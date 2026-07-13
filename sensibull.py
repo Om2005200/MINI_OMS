@@ -4,7 +4,7 @@ import csv
 import json
 from datetime import datetime,timedelta
 import time
-import asyncio
+
 from  fastapi import FastAPI,APIRouter,HTTPException,status,Depends,BackgroundTasks,Request
 from typing import List,Annotated
 from sqlmodel import select,desc
@@ -22,7 +22,10 @@ from sqlalchemy.orm import sessionmaker
 import jwt
 from redis.asyncio import Redis 
 
+import websockets 
 
+import asyncio
+PORT=6379
 database_url='postgresql+asyncpg://postgres:Samnokia123%40@localhost:5432/MINI_SENSIBULL'
 jwt_key='c932c7cad4cf33dd43ca01162474b4bce1ca32a76472ac7fb5de486b81f48cd1'
 jwt_algorithm='HS256'
@@ -501,6 +504,59 @@ class MINI_SENSIBULL:
                                 datas.EXIT_TIME=current_datetime
                                 datas.POSITION_TYPE='SELL'
                                 return datas
+
+
+
+    async def handling_the_intra_and_deliv_orders(self,session:AsyncSession):
+
+
+        order_box=await sensibull.state.redis.get('intraday_orders')
+        nifty_set=await sensibull.state.redis.get('NIFTY')
+        nifty_data_load=json.loads(nifty_set)
+        current_time=datetime.now().strftime('%H:%Y')
+        order_box_load=json.loads(order_box)
+        for orders in order_box_load:
+            stock_name=orders['STOCK_NAME']
+            main_tradingsymbol=orders['TRADING_SYMBOL']
+            exchange_token=orders['EXCHANGETOKEN']
+            position_type=orders['POSITION_TYPE']
+            if position_type=='SELL':
+
+                    
+                if current_time=='15:30':
+                    live_ltp=self.getting_the_live_prices(exchange_token)
+                    orders['STATUS']='CLOSED'
+                    orders['EXIT_TIME']=current_time
+                    orders['POSITION_TYPE']='BUY'
+                    orders['EXIT_PRICE']=live_ltp
+                    updated_orders=await sensibull.state.redis.set('ORDERS',json.dumps(orders))
+
+
+                    return updated_orders
+
+
+
+    async def websocket_for_nifty_data(self,websocket):
+        print('Client just got connected')
+        nifty_packet=await sensibull.state.redis.get('NIFTY')
+        nifty_data_load=json.loads(nifty_packet)
+        async for inputs in websocket:
+            if inputs=='NIFTY':
+                response={
+                    'RESPONSE':'TRUE',
+                    'DATA':'NIFTY',
+                    'PACKET':nifty_data_load
+                }
+                await websocket.send(json.dumps(response))
+
+                
+
+
+
+    
+                
+
+
 
 
 
