@@ -535,26 +535,59 @@ class MINI_SENSIBULL:
                     return updated_orders
 
 
+    async def serializing_the_index_sokcets(self,websocket):
+        nifty_dataset=await sensibull.state.redis.get('NIFTY')
+        nifty_loading=json.loads(nifty_dataset)
+        banknifty_dataset=await sensibull.state.redis.get('BANKNIFTY')
+        banknifty_loading=json.loads(banknifty_dataset)
+        sensex_dataset=await sensibull.state.redis.get('SENSEX')
+        sensex_loading=json.loads(sensex_dataset)
+        current_time=datetime.now().strftime('%H:%Y')
+        timestamp=[]
+        async for messages in websocket:
+            
+            if messages=='NIFTY':
+                await websocket.send(nifty_loading)
+            elif messages=='BANKNIFTY':
+                await websocket.send(banknifty_loading)
+            elif messages=='SENSEX':
+                await websocket.send(sensex_loading)
 
-    async def websocket_for_nifty_data(self,websocket):
-        print('Client just got connected')
-        nifty_packet=await sensibull.state.redis.get('NIFTY')
-        nifty_data_load=json.loads(nifty_packet)
-        async for inputs in websocket:
-            if inputs=='NIFTY':
-                response={
-                    'RESPONSE':'TRUE',
-                    'DATA':'NIFTY',
-                    'PACKET':nifty_data_load
-                }
-                await websocket.send(json.dumps(response))
 
-                
+            try:
+                last_time=timestamp[-1]
+                if current_time>last_time+20:
+                    server_check=await websocket.send('PING_SERVER')
+                    if server_check is None:
+                        await websocket.close()
+                    else:
+                        timestamp.append(current_time)
 
 
 
-    
-                
+
+            except Exception as e:
+                print('Continuing the sokcet ')
+                return
+            
+
+                    
+            
+            
+
+
+
+
+                        
+
+
+
+
+
+
+
+
+
 
 
 
