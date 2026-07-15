@@ -535,7 +535,7 @@ class MINI_SENSIBULL:
                     return updated_orders
 
 
-    async def serializing_the_index_sokcets(self,websocket):
+    async def serializing_the_index_sockets(self,websocket):
         nifty_dataset=await sensibull.state.redis.get('NIFTY')
         nifty_loading=json.loads(nifty_dataset)
         banknifty_dataset=await sensibull.state.redis.get('BANKNIFTY')
@@ -571,7 +571,35 @@ class MINI_SENSIBULL:
                 return
             
 
-                    
+    async def running_the_newer_events(self):
+        task1=await self.processing_the_overnight_orders()
+        task2=await self.handling_the_intra_and_deliv_orders()
+        task3=await self.serializing_the_index_sockets()
+
+        result1=asyncio.create_task(task1)
+        result2=asyncio.create_task(task2)
+        result3=asyncio.create_task(task3)
+
+        await result1
+        await result2
+        await result3
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
             
             
 
