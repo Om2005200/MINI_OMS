@@ -523,7 +523,7 @@ class MINI_SENSIBULL:
             if position_type=='SELL':
 
                     
-                if current_time=='15:30':
+                if current_time>='15:30':
                     live_ltp=self.getting_the_live_prices(exchange_token)
                     orders['STATUS']='CLOSED'
                     orders['EXIT_TIME']=current_time
@@ -533,6 +533,22 @@ class MINI_SENSIBULL:
 
 
                     return updated_orders
+            elif position_type=='BUY':
+                if current_time>="15:30":
+                    live_ltp_fetch=self.getting_the_live_prices(exchange_token)
+                    orders['STATUS']='CLOSED'
+                    orders['EXIT_TIME']=datetime.now().strftime('%H:%Y')
+                    orders['POSITION_TYPE']='SELL'
+                    orders['EXIT_PRICE']=live_ltp_fetch
+                    updated_orders_=await sensibull.state.redis.set('ORDERS',json.dumps(orders))
+                    return updated_orders_
+                
+
+                
+
+                
+                
+
 
 
     async def serializing_the_index_sockets(self,websocket):
@@ -579,6 +595,7 @@ class MINI_SENSIBULL:
         result1=asyncio.create_task(task1)
         result2=asyncio.create_task(task2)
         result3=asyncio.create_task(task3)
+
 
         await result1
         await result2
