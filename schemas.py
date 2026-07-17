@@ -17,6 +17,7 @@ class USERDATABASE(SQLModel,table=True):
     EMAIL_ID:str
     CONTACT_NO:int
     PASSWORD:str
+    
 
 class OVERNIGHT_ORDERS(SQLModel,table=True):
     __tablename__='MINI_SENSIBULL'
@@ -38,7 +39,8 @@ class OVERNIGHT_ORDERS(SQLModel,table=True):
     ORDER_ID:str
     STATUS:str
     EXCHANGETOKEN:str
-
+    STOP_LOSS:str
+    ORDER_CATEGORY:str
 
 
 class INTRADAY_ORDERS(SQLModel,table=True):
@@ -59,6 +61,8 @@ class INTRADAY_ORDERS(SQLModel,table=True):
     TOTAL_INVESTED_AMT:str
     CLIENT_ID:str
     ORDER_ID:str
+    STOP_LOSS:str
+    ORDER_CATEGORY:str
 
 
 

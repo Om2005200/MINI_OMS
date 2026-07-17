@@ -17,6 +17,8 @@ class ORDERPLACING(BaseModel):
    ORDER_ID:str
    ENTRY_TIME:Optional[int]
    EXIT_TIME:Optional[int]
+   STOP_LOSS:str
+   ORDER_CATEGORY:str
 
 class USERVERIFY(BaseModel):
     EMAIL:str
