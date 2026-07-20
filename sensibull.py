@@ -549,103 +549,19 @@ class MINI_SENSIBULL:
                                 datas.POSITION_TYPE='SELL'
                                 return datas
 
+    async def managing_the_delivery_orders(self,session:AsyncSession):
+        delivery_orders=select(OVERNIGHT_ORDERS)
+        result=await session.execute(delivery_orders)
+        current_time=datetime.now().strftime()
+        nifty_dataset=await sensibull.state
+        main_data=result.scalars().all()
+        for datas in main_data:
+            position_type=datas.POSITION_TYPE
+            exchange_token=datas.EXCHANGETOKEN
+            order_type=datas.ORDER_CATEGORY
 
-
-    async def handling_the_intra_and_deliv_orders(self,session:AsyncSession):
-
-
-        order_box=await sensibull.state.redis.get('intraday_orders')
-        nifty_set=await sensibull.state.redis.get('NIFTY')
-        
-        nifty_data_load=json.loads(nifty_set)
-        current_time=datetime.now().strftime('%H:%Y')
-        order_box_load=json.loads(order_box)
-        for orders in order_box_load:
-            stock_name=orders['STOCK_NAME']
-            main_tradingsymbol=orders['TRADING_SYMBOL']
-            exchange_token=orders['EXCHANGETOKEN']
-            position_type=orders['POSITION_TYPE']
-            stop_loss=orders['STOP_LOSS']
-            order_category=orders['ORDER_CATEGORY']
-            # if position_type=='SELL':
-
-                    
-            #     if current_time>='15:30':
-            #         live_ltp=self.getting_the_live_prices(exchange_token)
-            #         orders['STATUS']='CLOSED'
-            #         orders['EXIT_TIME']=current_time
-            #         orders['POSITION_TYPE']='BUY'
-            #         orders['EXIT_PRICE']=live_ltp
-            #         updated_orders=await sensibull.state.redis.set('ORDERS',json.dumps(orders))
-
-
-            #         return updated_orders
-            # elif position_type=='BUY':
-            #     if current_time>="15:30":
-            #         live_ltp_fetch=self.getting_the_live_prices(exchange_token)
-            #         orders['STATUS']='CLOSED'
-            #         orders['EXIT_TIME']=datetime.now().strftime('%H:%Y')
-            #         orders['POSITION_TYPE']='SELL'
-            #         orders['EXIT_PRICE']=live_ltp_fetch
-            #         updated_orders_=await sensibull.state.redis.set('ORDERS',json.dumps(orders))
-            #         return updated_orders_
-
-            if position_type=='SELL':
-                if order_category=='DELIVERY':
-                        
-
-                    if current_time<'15:30':
-                        entry_price=orders['ENTRY_PRICE']
-                        current_ltp=self.getting_the_live_prices(exchange_token)
-                        if current_ltp>=entry_price:
-                            orders['STATUS']='CLOSED'
-                            orders['EXIT_TIME']=datetime.now().strftime('%H:%Y')
-                            orders['EXIT_PRICE']=current_ltp
-                            orders['POSITION_TYPE']='BUY'
-                            
-                            await sensibull.state.redis.set('DELIVERY_ORDERS',json.dumps(orders)) 
-                            await sensibull.state.redis.set('sell_orders',json.dumps(orders))
-                            return
-                    elif current_time>='15:30':
-                        entry_price=orders['ENTRY_PRICE']
-                        current_ltp=self.getting_the_live_prices(exchange_token)
-                        orders['STATUS']='CLOSED'
-                        orders['EXIT_TIME']=datetime.now().strftime('%H:%Y')
-                        orders['POSITION_TYPE']='BUY'
-
-                        await sensibull.state.redis.set('DELIVERY_ORDERS',json.dumps(orders))
-                        await sensibull.state.redise.set('sell_orders',json.dumps(orders))
-                        return
-                    
-
-
-                if order_category=='INTRADAY':
-                    if current_time<'15:30':
-                        entry_price=orders['ENTRY_PRICE']
-                        current_price=self.getting_the_live_prices(exchange_token)
-                        sl_value=orders['STOP_LOSS']
-                        if current_price>=sl_value:
-                            orders['STATUS']='CLOSED'
-                            orders['EXIT_TIME']=datetime.now().strftime('%H:%Y')
-                            orders['EXIT_PRICE']=current_price
-                            orders['POSITION_TYPE']='BUY'
-                            await sensibull.state.redis.set('INTRADAY',json.dumps(orders))
-                            await sensibull.state.redi.set('sell_orders',json.dumps(orders))
-                            return 
-                    elif current_time>='15:30':
-                        entry_price=orders['ENTRY_PRICE']
-                        current_token=orders['EXCHANGE_TOKEN']
-                        current_price_band=self.getting_the_live_prices(current_token)
-                        orders['STATUS']='CLOSED'
-                        orders['EXIT_TIME']=datetime.now().strftime('%H:%Y')
-                        orders['EXIT_PRICE']=current_price_band
-                        orders['POSITION_TYPE']='BUY'
-                        await sensibull.state.redis.set('INTRADAY_ORDERS',json.dumps(orders))
-                        await sensibull.state.redis.set('sell_orders',json.dumps(orders))
-            if position_type=='BUY':
-                if order_category=='DELIVERY':
-                    if curre
-
+            order_status=datas.STATUS
+            
 
 
 
