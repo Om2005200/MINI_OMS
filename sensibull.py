@@ -548,6 +548,7 @@ class MINI_SENSIBULL:
                                 datas.EXIT_TIME=current_datetime
                                 datas.POSITION_TYPE='SELL'
                                 return datas
+                            
 
     async def managing_the_delivery_orders(self,session:AsyncSession):
         delivery_orders=select(OVERNIGHT_ORDERS)
@@ -557,14 +558,65 @@ class MINI_SENSIBULL:
         main_data=result.scalars().all()
         for datas in main_data:
             position_type=datas.POSITION_TYPE
-            exchange_token=datas.EXCHANGETOKEN
-            order_type=datas.ORDER_CATEGORY
-
+            entry_price=datas.ENTRY_PRICE
+            exit_price=datas.EXIT_PRICE
+            order_category=datas.ORDER_CATEGORY
             order_status=datas.STATUS
-            
+            order_stop_loss=datas.STOP_LOSS
+            exchange_token=datas.EXCHANGETOKEN
+            if order_category=='DELIVERY':
+                if order_status=='OPEN':
+                    if position_type=='SELL':
+                        if current_time>='15:30':
+                            datas['STATUS']='CLOSED'
+                            datas['POSITION_TYPE']='BUY'
+                            datas['EXIT_PRICE']=self.getting_the_live_prices(exchange_token)
+                            datas['EXIT_TIME']=datetime.now().strftime('%H:%Y')
+                            await sensibull.state.redis.set('DELIVERY_ORDERS',json.dumps(datas))
+                        elif current_time<'15:30':
+                            if order_stop_loss is not None:
+                                live_ltp=self.getting_the_live_prices(exchange_token)
+                                if live_ltp>=order_stop_loss:
+                                    datas['STATUS']='CLOSED'
+                                    datas['EXIT_PRICE']=live_ltp
+                                    datas['EXIT_TIME']=current_time
+                                    datas['POSITION_TYPE']='BUY'
+                                    await sensibull.state.redis.set('DELIVERY_ORDERS',json.dumps(datas))
+                                else:
+                                    return
+                    elif position_type=='BUY':
+                        if current_time>='15:30':
+                            datas['STATUS']='CLOSED'
+                            datas['POSITION_TYPE']='SELL'
+                            datas['EXIT_TIME']=datetime.now().strftime('%H:%Y')
+                            datas['EXIT_PRICE']=self.getting_the_live_prices(exchange_token)
+                            await sensibull.state.redis.set('DELIVERY_ORDERS',json.dumps(datas))
+                        elif current_time<'15:30':
+                            if order_stop_loss is not None:
+                                live_ltp=self.getting_the_live_prices(exchange_token)
+                                if live_ltp>=order_stop_loss:
+                                    datas['STATUS']='CLOSED'
+                                    datas['EXIT_TIME']=datetime.now().strftime('%H:%Y')
+                                    datas['EXIT_PRICE']=self.getting_the_live_prices(exchange_token)
+                                    datas['POSITION_TYPE']='BUY'
+                                    await sensibull.state.redis.set('DELIVERY_ORDERS',json.dumps(datas))
+
+
+                                else:
+                                    return
+                        
+
+                                
 
 
 
+
+                                
+
+
+
+
+                            
                     
                         
 

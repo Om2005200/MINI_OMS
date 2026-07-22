@@ -39,7 +39,7 @@ class OVERNIGHT_ORDERS(SQLModel,table=True):
     ORDER_ID:str
     STATUS:str
     EXCHANGETOKEN:str
-    STOP_LOSS:str
+    STOP_LOSS: Optional[str] = Field(default=None)
     ORDER_CATEGORY:str
 
 
