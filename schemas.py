@@ -43,6 +43,7 @@ class OVERNIGHT_ORDERS(SQLModel,table=True):
     TARGET_PRICE:str
     STOP_LOSS: Optional[str] = Field(default=None,primary_key=True)
     
+    
 
 class INTRADAY_ORDERS(SQLModel,table=True):
     __tablename__='INTRADAY_ORDERS'
