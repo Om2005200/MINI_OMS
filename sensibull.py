@@ -421,200 +421,263 @@ class MINI_SENSIBULL:
                                 await sensibull.state.redis.set('buy_order',json.dumps(banknifty_sell_order_))
 
                                 return banknifty_sell_order_
-                            
+    
 
 
-
-                    
-                        
-                        
-
-
-
-    async def processing_the_overnight_orders(self,session:AsyncSession):
-        nifty_main_data=await sensibull.state.redis.get('NIFTY')
-        nifty_data_load=json.loads(nifty_main_data)
-        getting_the_data=select(OVERNIGHT_ORDERS)
-        result=await session.execute(getting_the_data)
-        banknifty_main_data_load=await sensibull.state.redis.get('BANKNIFTY')
-        banknifty_data_load=json.loads(banknifty_main_data_load)
-        sensex_data_loading=await sensibull.state.redis.get('SENSEX')
-        sensex_master_data=json.loads(sensex_data_loading)
-        all_data=result.scalars().all()
-        current_datetime=datetime.now().strftime('%H:%Y')
-        current_date=''
-        if current_datetime=='03:15':
-            for datas in all_data:
-                strikeprice=datas.STRIKEPRICE
-                expiry=datas.EXPIRY
-                tradingsymbol=datas.TRADINGSYMBOL
-                client_id=datas.CLIENT_ID
-                stock_name=datas.STOCK_NAME
-                status_=datas.STATUS
-                position_type=datas.POSITION_TYPE
-                if position_type=='SELL':
-                        
-                    if stock_name=='NIFTY':
-                        nifty_master_data_loading=nifty_data_load('data')
-                        for nifty in nifty_master_data_loading:
-                            nifty_tradingsymbol=nifty['tradingsymbol']
-                            nifty_expiry=nifty['expiry']
-                            if nifty_tradingsymbol==tradingsymbol and status_=='OPEN' and nifty_expiry==current_date:
-                                nifty_expiry_exchangetoken=nifty['exchangetoken']
-                                print('{} POSITION EXPIRING TODAY '.format(nifty))
-                                current_nifty_ltp=self.getting_the_live_prices(nifty_expiry_exchangetoken)
-                                datas.STATUS='CLOSED'
-                                datas.EXIT_PRICE=current_nifty_ltp
-                                datas.EXIT_TIME=current_datetime
-                                datas.POSITION_TYPE='BUY'
-                                return datas
-                    elif stock_name=='BANKNIFTY':
-                        banknifty_data_loading=banknifty_data_load('data')
-                        for banknifty in banknifty_data_loading:
-                            banknifty_strikeprice=banknifty['strikeprice']
-                            banknifty_tradingsymbol=banknifty['tradingsymbol']
-                            banknifty_expiry=banknifty['expiry']
-                            
-                            if tradingsymbol==banknifty_tradingsymbol and status_=='OPEN' and  banknifty_expiry==current_date:
-                                print('{} POSITION AUTO SQAURE OFF DUE TO EXPIRY')
-                                banknifty_master_exchange_token=banknifty['exchangetoken']
-                                banknifty_live_prices=self.getting_the_live_prices(banknifty_master_exchange_token)
-
-                                datas.STATUS=='CLOSED'
-                                datas.EXIT_TIME=current_datetime
-                                datas.EXIT_PRICE=banknifty_live_prices
-                                datas.POSITION_TYPE='BUY'
-                                return datas 
-                            
-                    elif stock_name=='SENSEX':
-                        sensex_=sensex_master_data('data')
-                        for sensex in sensex_:
-                            sensex_tradingsymbol=sensex['tradingsymbol']
-                            sensex_expiry=sensex['expiry']
-                            
-                            if sensex_tradingsymbol==tradingsymbol and status_=='OPEN' and sensex_expiry==current_date:
-                                print('{} POSITION SQAURE OFF DUE TO EXPIRY')
-                                sensex_exchangetoken=sensex['exchangetoken']
-                                sensex_live_ltp=self.getting_the_live_prices(sensex_exchangetoken)
-                                datas.STATUS=='CLOSED'
-                                datas.EXIT_TIME=current_datetime
-                                datas.EXIT_PRICE=sensex_live_ltp
-                                datas.POSITION_TYPE='BUY'
-                                return datas
-                elif position_type=='BUY':
-                    if stock_name=='NIFTY':
-                        nifty_buy_data=nifty_data_load('data') 
-                        for niftys in nifty_buy_data:
-                            niftys_strikeprice=niftys['strikeprice']
-                            niftys_expiry=niftys['expiry']
-                            niftys_tradingsymbol=niftys['tradingsymbol']
-                            #niftys_exchangetoken=niftys['exchangetoken']
-
-                            if niftys_tradingsymbol==tradingsymbol and status_=='OPEN' and niftys_expiry==current_date:
-                                niftys_exchangetoken=niftys['exchangetoken']
-                                niftys_live_prices=self.getting_the_live_prices(niftys_exchangetoken)
-                                datas.EXIT_PRICE=niftys_live_prices
-                                datas.EXIT_TIME=current_datetime
-                                datas.STATUS='CLOSED'
-                                datas.POSITION_TYPE='SELL'
-                                return datas
-                    elif stock_name=='BANKNIFTY':
-                        banknifty_=banknifty_data_load('data')
-                        for buy_banknifty in banknifty_:
-                            buy_banknifty_strikeprice=buy_banknifty['strikeprice']
-                            buy_tradingsymbol=buy_banknifty['tradingsymbol']
-                            buy_expiry=buy_banknifty['expiry']
-                            if buy_tradingsymbol==tradingsymbol and status_=='OPEN' and  buy_expiry==current_date:
-                                current_exchange=buy_banknifty['exchangetoken']
-                                print('{} POSITION AUTO SQAURE OFF DUE TO EXPIRY'.format(datas))
-                                current_price=self.getting_the_live_prices()
-                                datas.STATUS='CLOSED'
-                                datas.EXIT_PRICE=self.getting_the_live_prices(current_price)
-                                datas.EXIT_TIME=current_datetime
-                                datas.POSITION_TYPE='SELL'
-                    elif stock_name=='SENSEX':
-                        sensex_=sensex_master_data('data')
-                        for sensex in sensex_:
-                            sensex_strikeprice=sensex['strikeprice']
-                            sensex_tradingsymbol_=sensex['tradingsymbol']
-                            sensex_master_expiry=sensex['expiry']
-                            if sensex_tradingsymbol_==tradingsymbol and status_=='OPEN' and sensex_master_expiry==current_date:
-                                print('{} POSITION AUTO SQAURE OFF DUE TO EXPIRY')
-                                sensex_buy_exchangetoken=sensex['exchangetoken']
-                                sensex_ltp=self.getting_the_live_prices(sensex_buy_exchangetoken)
-
-                                datas.STATUS='CLOSED'
-                                datas.EXIT_PRICE=sensex_ltp
-                                datas.EXIT_TIME=current_datetime
-                                datas.POSITION_TYPE='SELL'
-                                return datas
-                            
-
-    async def managing_the_delivery_orders(self,session:AsyncSession):
-        delivery_orders=select(OVERNIGHT_ORDERS)
-        result=await session.execute(delivery_orders)
-        current_time=datetime.now().strftime()
-        nifty_dataset=await sensibull.state
-        main_data=result.scalars().all()
+    async def mananging_the_orders(self,session:AsyncSession):
+        order_book=select(OVERNIGHT_ORDERS)
+        process=await session.execute(order_book)
+        
+        main_data=process.scalars().all()
         for datas in main_data:
-            position_type=datas.POSITION_TYPE
+            client_id=datas.CLIENT_ID
             entry_price=datas.ENTRY_PRICE
             exit_price=datas.EXIT_PRICE
-            order_category=datas.ORDER_CATEGORY
-            order_status=datas.STATUS
-            order_stop_loss=datas.STOP_LOSS
             exchange_token=datas.EXCHANGETOKEN
-            if order_category=='DELIVERY':
-                if order_status=='OPEN':
-                    if position_type=='SELL':
-                        if current_time>='15:30':
-                            datas['STATUS']='CLOSED'
-                            datas['POSITION_TYPE']='BUY'
-                            datas['EXIT_PRICE']=self.getting_the_live_prices(exchange_token)
-                            datas['EXIT_TIME']=datetime.now().strftime('%H:%Y')
-                            await sensibull.state.redis.set('DELIVERY_ORDERS',json.dumps(datas))
-                        elif current_time<'15:30':
-                            if order_stop_loss is not None:
-                                live_ltp=self.getting_the_live_prices(exchange_token)
-                                if live_ltp>=order_stop_loss:
-                                    datas['STATUS']='CLOSED'
-                                    datas['EXIT_PRICE']=live_ltp
-                                    datas['EXIT_TIME']=current_time
-                                    datas['POSITION_TYPE']='BUY'
-                                    await sensibull.state.redis.set('DELIVERY_ORDERS',json.dumps(datas))
-                                else:
-                                    return
-                    elif position_type=='BUY':
-                        if current_time>='15:30':
-                            datas['STATUS']='CLOSED'
-                            datas['POSITION_TYPE']='SELL'
-                            datas['EXIT_TIME']=datetime.now().strftime('%H:%Y')
-                            datas['EXIT_PRICE']=self.getting_the_live_prices(exchange_token)
-                            await sensibull.state.redis.set('DELIVERY_ORDERS',json.dumps(datas))
-                        elif current_time<'15:30':
-                            if order_stop_loss is not None:
-                                live_ltp=self.getting_the_live_prices(exchange_token)
-                                if live_ltp>=order_stop_loss:
-                                    datas['STATUS']='CLOSED'
-                                    datas['EXIT_TIME']=datetime.now().strftime('%H:%Y')
-                                    datas['EXIT_PRICE']=self.getting_the_live_prices(exchange_token)
-                                    datas['POSITION_TYPE']='BUY'
-                                    await sensibull.state.redis.set('DELIVERY_ORDERS',json.dumps(datas))
+            order_status=datas.STATUS
+            order_category=datas.ORDER_CATEGORY
+            instrument_type=datas.INSTRUMENTYPE
+            stop_loss=datas.STOP_LOSS
+            target_price=datas.TARGET_PRICE
+            expiry=datas.EXPIRY
+            position_type=datas.POSITION_TYPE
+            current_date=datetime.now()
+            current_time=datetime.now().strftime('%H:%Y')
+
+            if order_status=='OPEN' and order_category=='DELIVERY':
+                if position_type=='BUY':
+                    
+                    if stop_loss is not None:
+                        if target_price is not None:
+                            if expiry is not None:
+                                if instrument_type=='CE':
+                                    targetprice=datas.TARGET_PRICE
+                                    exchangetoken=datas.EXCHANGETOKEN
+                                    expire=datas.EXPIRY
+                                    current_price=self.getting_the_live_prices(exchangetoken)
+                                    if current_price<=stop_loss:
+                                        datas.STATUS='CLOSED'
+                                        datas.EXIT_TIME=datetime.now().strftime('%H:%Y')
+                                        datas.EXIT_PRICE=current_price
+                                        datas.POSITION_TYPE='SELL'
+                                        
+                                        await session.commit()
+                                        
+
+                                    elif current_price>=targetprice:
+                                        current_price=self.getting_the_live_prices(exchange_token)
+                                        datas.STATUS='CLOSED'
+                                        datas.EXIT_PRICE=current_price
+
+                                        datas.EXIT_TIME=datetime.now().strftime('%H:%Y')
+                                        datas.POSITION_TYPE='SELL'
+                                        await session.commit()
 
 
-                                else:
-                                    return
-                        
+                                    elif current_date==expire:
+                                        datas.STATUS='CLOSED'
+                                        datas.EXIT_PRICE=current_price
+                                        datas.EXIT_TIME=datetime.now().strftime('%H:%Y')
+                                        datas.POSITION_TYPE='SELL'
+                                        await session.commit()
+                    elif stop_loss is None:
+                        if target_price is not None:
+                            if expiry is not None:
+                                if instrument_type=='CE':
+                                    targetprice=datas.TARGET_PRICE
+                                    exchangetoken=datas.EXCHANGETOKEN
+                                    expire=datas.EXPIRY
+                                    current_price=self.getting_the_live_prices(exchangetoken)
+                                    if current_price>=targetprice:
+                                        datas.STATUS='CLOSED'
+                                        datas.EXIT_PRICE=current_price
+                                        datas.EXIT_TIME=datetime.now().stftime('%H:%Y')
+                                        datas.POSITION_TYPE='SELL'
+                                        await session.commit()
+                                    elif current_date==expire:
+                                        datas.STATUS='CLOSED'
+                                        datas.POSITION_TYPE='SELL'
+                                        datas.EXIT_PRICE=current_price
+                                        datas.EXIT_TIME=datetime.now().strftime('%H:%Y')
+                                        await session.commit()
+                    
 
-                                
+                    elif stop_loss is None:
+                        if target_price is None:
+                            if expiry is not None:
+                                if instrument_type=='CE':
+                                    targetprice=datas.TARGET_PRICE
+                                    exchangetoken=datas.EXCHANGETOKEN
+                                    expire=datas.EXPIRY
+                                    current_price=self.getting_the_live_prices(exchangetoken)
+                                    if current_date==expire:
+                                        if current_time=="15:30":
+
+
+                                            datas.STATUS='CLOSED'
+                                            datas.EXIT_TIME=datetime.now().strftime('%H:%Y')
+                                            datas.EXIT_PRICE=current_price
+
+
+                                            datas.POSITION_TYPE='SELL'
+                                            await session.commit()
+
+
+                    elif stop_loss is not None:
+                        if target_price is None:
+                            if expiry is None:
+                                if instrument_type=='CE':
+                                    targetprice=datas.TARGET_PRICE
+                                    exchangetoken=datas.EXCHANGETOKEN
+                                    expire=datas.EXPIRY
+                                    current_price=self.getting_the_live_prices(exchangetoken)
+                                    if current_price<=stop_loss:
+
+                                        datas.STATUS='CLOSED'
+                                        datas.EXIT_TIME=datetime.now().strftime('%H:%Y')
+                                        datas.EXIT_PRICE=current_price
+                                        datas.POSITION_TYPE='SELL'
+
+                                        await session.commit()
+
+                    elif stop_loss is not None:
+                        if target_price is not None:
+                            if expiry is not None:
+                                if instrument_type=='PE':
+                                    targetprice=datas.TARGET_PRICE
+                                    exchangetoken=datas.EXCHANGETOKEN
+                                    expire=datas.EXPIRY
+                                    current_price=self.getting_the_live_prices(exchangetoken)
+                                    if current_price>=stop_loss:
+                                        datas.STATUS='CLOSED'
+                                        datas.EXIT_TIME=datetime.now().strftime('%H:%Y')
+                                        datas.EXIT_PRICE=current_price
+                                        datas.POSITION_TYPE='SELL'
+                                        await session.commit()
+                                    
+
+                                    elif current_price<=targetprice:
+                                        datas.STATUS='CLOSED'
+                                        datas.POSITION_TYPE='SELL'
+                                        datas.EXIT_PRICE=current_price
+                                        datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
+                                        await session.commit()
+
+
+                                    elif current_date==expire:
+                                        if current_time>='15:30':
+                                            datas.STATUS='CLOSED'
+                                            datas.EXIT_PRICE=current_price
+                                            datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
+                                            datas.POSITION_TYPE='SELL'
+                                            await session.commit()
+                    elif stop_loss is not None:
+                        if target_price is not None:
+                            if expiry is None:
+                                if instrument_type=='PE':
+                                    targetprice=datas.TARGET_PRICE
+                                    exchangetoken=datas.EXCHANGETOKEN
+                                    expire=datas.EXPIRY
+                                    current_price=self.getting_the_live_prices(exchangetoken)
+                                    if current_price>=stop_loss:
+                                        datas.STATUS='CLOSED'
+                                        datas.POSITION_TYPE='SELL'
+                                        datas.EXIT_PRICE=current_price
+                                        datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
+                                    elif current_price<=target_price:
+                                        datas.STATUS='CLOSED'
+                                        datas.EXIT_PRICE=current_price
+                                        datas.EXIT_TIME=datetime.now().strftime('%H:%Y')
+                                        datas.POSITION_TYPE='SELL'
+                    elif stop_loss is None:
+                        if target_price is not None:
+                            if expiry is not None:
+                                if instrument_type=='PE':
+                                    targetprice=datas.TARGET_PRICE
+                                    exchangetoken=datas.EXCHANGETOKEN
+                                    expire=datas.EXPIRY
+                                    current_price=self.getting_the_live_prices(exchangetoken)
+                                    if current_price<=targetprice:
+                                        datas.STATUS='CLOSED'
+                                        datas.POSITION_TYPE='SELL'
+                                        datas.EXIT_PRICE=current_price
+                                        datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
+                                    elif current_time=='15:30':
+                                        if expire==current_date:
+                                            datas.STATUS='CLOSED'
+                                            datas.POSITION_TYPE='SELL'
+                                            datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
+                                            datas.EXIT_PRICE=current_price
+
+
+                    elif stop_loss is not None:
+                        if expiry is not None:
+                            if target_price is None:
+                                if instrument_type=='PE':
+                                    targetprice=datas.TARGET_PRICE
+                                    exchangetoken=datas.EXCHANGETOKEN
+                                    expire=datas.EXPIRY
+                                    current_price=self.getting_the_live_prices(exchangetoken)
+                                    if current_price>=stop_loss:
+                                        datas.STATUS='CLOSED'
+                                        datas.POSITION_TYPE='SELL'
+                                        datas.EXIT_PRICE=current_price
+                                        datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
+                                    elif current_date==expire:
+                                        if current_time=='15:30':
+                                            datas.STATUS='CLOSED'
+                                            datas.EXIT_PRICE=current_price
+                                            datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
+                    elif stop_loss is None:
+                        if target_price is None:
+                            if expiry is not  None:
+                                if instrument_type=='PE':
+                                    targetprice=datas.TARGET_PRICE
+                                    exchangetoken=datas.EXCHANGETOKEN
+                                    expire=datas.EXPIRY
+                                    current_price=self.getting_the_live_prices(exchangetoken)
+                                    if current_time=='15:30':
+                                        if current_date==expire:
+                                            datas.STATUS='CLOSED'
+                                            datas.EXIT_PRICE=current_price
+                                            datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
+                                            datas.POSITION_TYPE='SELL'
+                    elif stop_loss is None:
+                        if expiry is None:
+                            if target_price is not None:
+                                if instrument_type=='PE':
+                                    targetprice=datas.TARGET_PRICE
+                                    exchangetoken=datas.EXCHANGETOKEN
+                                    expire=datas.EXPIRY
+                                    current_price=self.getting_the_live_prices(exchangetoken)
+                                    datas.STATUS='CLOSED'
+                                    datas.POSITION_TYPE='SELL'
+                                    datas.EXIT_PRICE=current_price
+                                    datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
+                    elif stop_loss is not None:
+                        if expiry is None:
+                            if target_price is None:
+                                if instrument_type=='PE':
+                                    targetprice=datas.TARGET_PRICE
+                                    exchangetoken=datas.EXCHANGETOKEN
+                                    expire=datas.EXPIRY
+                                    current_price=self.getting_the_live_prices(exchangetoken)
+                                    if current_price>=stop_loss:
+                                        datas.STATUS='CLOSED'
+                                        datas.EXIT_PRICE=current_price
+                                        datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
+                                        datas.EXIT_PRICE=current_price
+
+                elif position_type=='SELL':
+                    pass
+                
 
 
 
 
-                                
 
 
-
+                                        
 
                             
                     
