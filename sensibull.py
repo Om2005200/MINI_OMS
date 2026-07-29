@@ -4,6 +4,7 @@ import csv
 import json
 from datetime import datetime,timedelta
 import time
+from sqlalchemy import text
 
 from  fastapi import FastAPI,APIRouter,HTTPException,status,Depends,BackgroundTasks,Request
 from typing import List,Annotated
@@ -33,6 +34,12 @@ jwt_algorithm='HS256'
 sensibull=FastAPI()
 router=APIRouter()
 engine=create_async_engine(database_url,echo=True)
+async def init_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+@sensibull.on_event("startup")
+async def startup():
+    await init_db()
 bcrypt_context=CryptContext(schemes=['bcrypt'],deprecated='auto')
 oauth_passowrd=OAuth2PasswordBearer
 oauth2_scheme=OAuth2PasswordBearer(tokenUrl='/login')
@@ -424,7 +431,7 @@ class MINI_SENSIBULL:
     
 
 
-    async def mananging_the_orders(self,session:AsyncSession):
+    async def managing_the_orders(self,session:AsyncSession):
         order_book=select(OVERNIGHT_ORDERS)
         process=await session.execute(order_book)
         
@@ -443,258 +450,19 @@ class MINI_SENSIBULL:
             position_type=datas.POSITION_TYPE
             current_date=datetime.now()
             current_time=datetime.now().strftime('%H:%Y')
-
-            if order_status=='OPEN' and order_category=='DELIVERY':
-                if position_type=='BUY':
-                    
-                    if stop_loss is not None:
-                        if target_price is not None:
-                            if expiry is not None:
-                                if instrument_type=='CE':
-                                    targetprice=datas.TARGET_PRICE
-                                    exchangetoken=datas.EXCHANGETOKEN
-                                    expire=datas.EXPIRY
-                                    current_price=self.getting_the_live_prices(exchangetoken)
-                                    if current_price<=stop_loss:
-                                        datas.STATUS='CLOSED'
-                                        datas.EXIT_TIME=datetime.now().strftime('%H:%Y')
-                                        datas.EXIT_PRICE=current_price
-                                        datas.POSITION_TYPE='SELL'
+            if order_status=='OPEN':
+                if order_category=='DELIVERY':
+                    if position_type=='SELL':
+                        if instrument_type=='CE':
+                            if stop_loss is not None:
+                                if target_price is not None:
+                                    if expiry is not None:
+                                        master_exchangetoken=datas.EXCHANGETOKEN
+                                        expi=datas.EXPIRY
+                                        target=datas.TARGET_PRICE
                                         
-                                        await session.commit()
-                                        
-
-                                    elif current_price>=targetprice:
-                                        current_price=self.getting_the_live_prices(exchange_token)
-                                        datas.STATUS='CLOSED'
-                                        datas.EXIT_PRICE=current_price
-
-                                        datas.EXIT_TIME=datetime.now().strftime('%H:%Y')
-                                        datas.POSITION_TYPE='SELL'
-                                        await session.commit()
-
-
-                                    elif current_date==expire:
-                                        datas.STATUS='CLOSED'
-                                        datas.EXIT_PRICE=current_price
-                                        datas.EXIT_TIME=datetime.now().strftime('%H:%Y')
-                                        datas.POSITION_TYPE='SELL'
-                                        await session.commit()
-                    elif stop_loss is None:
-                        if target_price is not None:
-                            if expiry is not None:
-                                if instrument_type=='CE':
-                                    targetprice=datas.TARGET_PRICE
-                                    exchangetoken=datas.EXCHANGETOKEN
-                                    expire=datas.EXPIRY
-                                    current_price=self.getting_the_live_prices(exchangetoken)
-                                    if current_price>=targetprice:
-                                        datas.STATUS='CLOSED'
-                                        datas.EXIT_PRICE=current_price
-                                        datas.EXIT_TIME=datetime.now().stftime('%H:%Y')
-                                        datas.POSITION_TYPE='SELL'
-                                        await session.commit()
-                                    elif current_date==expire:
-                                        datas.STATUS='CLOSED'
-                                        datas.POSITION_TYPE='SELL'
-                                        datas.EXIT_PRICE=current_price
-                                        datas.EXIT_TIME=datetime.now().strftime('%H:%Y')
-                                        await session.commit()
-                    
-
-                    elif stop_loss is None:
-                        if target_price is None:
-                            if expiry is not None:
-                                if instrument_type=='CE':
-                                    targetprice=datas.TARGET_PRICE
-                                    exchangetoken=datas.EXCHANGETOKEN
-                                    expire=datas.EXPIRY
-                                    current_price=self.getting_the_live_prices(exchangetoken)
-                                    if current_date==expire:
-                                        if current_time=="15:30":
-
-
-                                            datas.STATUS='CLOSED'
-                                            datas.EXIT_TIME=datetime.now().strftime('%H:%Y')
-                                            datas.EXIT_PRICE=current_price
-
-
-                                            datas.POSITION_TYPE='SELL'
-                                            await session.commit()
-
-
-                    elif stop_loss is not None:
-                        if target_price is None:
-                            if expiry is None:
-                                if instrument_type=='CE':
-                                    targetprice=datas.TARGET_PRICE
-                                    exchangetoken=datas.EXCHANGETOKEN
-                                    expire=datas.EXPIRY
-                                    current_price=self.getting_the_live_prices(exchangetoken)
-                                    if current_price<=stop_loss:
-
-                                        datas.STATUS='CLOSED'
-                                        datas.EXIT_TIME=datetime.now().strftime('%H:%Y')
-                                        datas.EXIT_PRICE=current_price
-                                        datas.POSITION_TYPE='SELL'
-
-                                        await session.commit()
-
-                    elif stop_loss is not None:
-                        if target_price is not None:
-                            if expiry is not None:
-                                if instrument_type=='PE':
-                                    targetprice=datas.TARGET_PRICE
-                                    exchangetoken=datas.EXCHANGETOKEN
-                                    expire=datas.EXPIRY
-                                    current_price=self.getting_the_live_prices(exchangetoken)
-                                    if current_price>=stop_loss:
-                                        datas.STATUS='CLOSED'
-                                        datas.EXIT_TIME=datetime.now().strftime('%H:%Y')
-                                        datas.EXIT_PRICE=current_price
-                                        datas.POSITION_TYPE='SELL'
-                                        await session.commit()
-                                    
-
-                                    elif current_price<=targetprice:
-                                        datas.STATUS='CLOSED'
-                                        datas.POSITION_TYPE='SELL'
-                                        datas.EXIT_PRICE=current_price
-                                        datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
-                                        await session.commit()
-
-
-                                    elif current_date==expire:
-                                        if current_time>='15:30':
-                                            datas.STATUS='CLOSED'
-                                            datas.EXIT_PRICE=current_price
-                                            datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
-                                            datas.POSITION_TYPE='SELL'
-                                            await session.commit()
-                    elif stop_loss is not None:
-                        if target_price is not None:
-                            if expiry is None:
-                                if instrument_type=='PE':
-                                    targetprice=datas.TARGET_PRICE
-                                    exchangetoken=datas.EXCHANGETOKEN
-                                    expire=datas.EXPIRY
-                                    current_price=self.getting_the_live_prices(exchangetoken)
-                                    if current_price>=stop_loss:
-                                        datas.STATUS='CLOSED'
-                                        datas.POSITION_TYPE='SELL'
-                                        datas.EXIT_PRICE=current_price
-                                        datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
-                                    elif current_price<=target_price:
-                                        datas.STATUS='CLOSED'
-                                        datas.EXIT_PRICE=current_price
-                                        datas.EXIT_TIME=datetime.now().strftime('%H:%Y')
-                                        datas.POSITION_TYPE='SELL'
-                    elif stop_loss is None:
-                        if target_price is not None:
-                            if expiry is not None:
-                                if instrument_type=='PE':
-                                    targetprice=datas.TARGET_PRICE
-                                    exchangetoken=datas.EXCHANGETOKEN
-                                    expire=datas.EXPIRY
-                                    current_price=self.getting_the_live_prices(exchangetoken)
-                                    if current_price<=targetprice:
-                                        datas.STATUS='CLOSED'
-                                        datas.POSITION_TYPE='SELL'
-                                        datas.EXIT_PRICE=current_price
-                                        datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
-                                    elif current_time=='15:30':
-                                        if expire==current_date:
-                                            datas.STATUS='CLOSED'
-                                            datas.POSITION_TYPE='SELL'
-                                            datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
-                                            datas.EXIT_PRICE=current_price
-
-
-                    elif stop_loss is not None:
-                        if expiry is not None:
-                            if target_price is None:
-                                if instrument_type=='PE':
-                                    targetprice=datas.TARGET_PRICE
-                                    exchangetoken=datas.EXCHANGETOKEN
-                                    expire=datas.EXPIRY
-                                    current_price=self.getting_the_live_prices(exchangetoken)
-                                    if current_price>=stop_loss:
-                                        datas.STATUS='CLOSED'
-                                        datas.POSITION_TYPE='SELL'
-                                        datas.EXIT_PRICE=current_price
-                                        datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
-                                    elif current_date==expire:
-                                        if current_time=='15:30':
-                                            datas.STATUS='CLOSED'
-                                            datas.EXIT_PRICE=current_price
-                                            datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
-                    elif stop_loss is None:
-                        if target_price is None:
-                            if expiry is not  None:
-                                if instrument_type=='PE':
-                                    targetprice=datas.TARGET_PRICE
-                                    exchangetoken=datas.EXCHANGETOKEN
-                                    expire=datas.EXPIRY
-                                    current_price=self.getting_the_live_prices(exchangetoken)
-                                    if current_time=='15:30':
-                                        if current_date==expire:
-                                            datas.STATUS='CLOSED'
-                                            datas.EXIT_PRICE=current_price
-                                            datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
-                                            datas.POSITION_TYPE='SELL'
-                    elif stop_loss is None:
-                        if expiry is None:
-                            if target_price is not None:
-                                if instrument_type=='PE':
-                                    targetprice=datas.TARGET_PRICE
-                                    exchangetoken=datas.EXCHANGETOKEN
-                                    expire=datas.EXPIRY
-                                    current_price=self.getting_the_live_prices(exchangetoken)
-                                    datas.STATUS='CLOSED'
-                                    datas.POSITION_TYPE='SELL'
-                                    datas.EXIT_PRICE=current_price
-                                    datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
-                    elif stop_loss is not None:
-                        if expiry is None:
-                            if target_price is None:
-                                if instrument_type=='PE':
-                                    targetprice=datas.TARGET_PRICE
-                                    exchangetoken=datas.EXCHANGETOKEN
-                                    expire=datas.EXPIRY
-                                    current_price=self.getting_the_live_prices(exchangetoken)
-                                    if current_price>=stop_loss:
-                                        datas.STATUS='CLOSED'
-                                        datas.EXIT_PRICE=current_price
-                                        datas.EXIT_TIME=datetime.now().strftime("%H:%Y")
-                                        datas.EXIT_PRICE=current_price
-
-                elif position_type=='SELL':
-                    pass
-                
-
-
-
-
-
-
-                                        
-
-                            
-                    
-                        
-
-                
-
-
-                
 
             
-                
-
-                
-
-                
-                
 
 
 
@@ -735,17 +503,16 @@ class MINI_SENSIBULL:
             
     
     async def running_the_newer_events(self):
-        task1=await self.processing_the_overnight_orders()
-        task2=await self.handling_the_intra_and_deliv_orders()
+        task1=await self.managing_the_orders()
         task3=await self.serializing_the_index_sockets()
 
         result1=asyncio.create_task(task1)
-        result2=asyncio.create_task(task2)
+        #result2=asyncio.create_task(task2)
         result3=asyncio.create_task(task3)
 
 
         await result1
-        await result2
+        #await result2
         await result3
 
 
@@ -834,124 +601,8 @@ class MINI_SENSIBULL:
     
             
 s=MINI_SENSIBULL()
-class SENSIBULL_HELPER:
-    async def create_new_user(self,user_data:USERACCOUNT,session:AsyncSession):
-        create_new_user=USERDATABASE(NAME=user_data.NAME,CONTACT_NO=user_data.CONTACT_NO,EMAIL_ID=user_data.EMAIL_ID,PASSWORD=bcrypt_context.hash(user_data.PASSWORD))
-        if self.create_new_user is None:
-            return False
-        session.add(create_new_user)
 
-        await session.commit()
-        await session.refresh(create_new_user)
-        
-        await sensibull.state.redis.set('client_id_set',json.dumps(user_data.CONTACT_NO),ex=1000)
-
-        return create_new_user
-    
-    async def verify_user(self,user_data:USERACCOUNT,session:AsyncSession):
-        user_verify=select(USERDATABASE).where(USERDATABASE.EMAIL_ID==user_data.EMAIL_ID,USERDATABASE.PASSWORD==user_data.PASSWORD)
-        exceution= await session.execute(user_verify)
-        result=exceution.first(exceution)
-        return result
-        
-    
-
-    async def creating_the_access_token(self,client_name:str,client_email_id:str,expiry:timedelta):
-        encode={'sub':client_name,'email':client_email_id,}
-        expires=datetime.utcnow()+expiry
-        encode.update({'exp':expires})
-        return jwt.encode(encode,jwt_key,algorithm=jwt_algorithm)
-    
-    async def verify_acces_token(self,user_input:Annotated[str,Depends(oauth2_scheme)]):
-        data_load=jwt.decode(user_input,jwt_key,algorithms=[jwt_algorithm])
-        username:str=data_load.get('sub')
-        # client_no:int=data_load.get('no')
-        client_email_id:str=data_load.get('email')
-        #publishing_date:int=data_load.get('create_date')
-
-        if username  or client_email_id is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='UNAUTHORIZED ACCESS TO THE SYSTEM')
-        
-        return True
-    
-
-    async def creating_the_refresh_token(self,user_data:USERACCOUNT,expiry:timedelta):
-        creation={'sub':user_data.NAME,'client_no':user_data.CONTACT_NO,'email_id':user_data.EMAIL_ID}
-        expiries=datetime.utcnow()+expiry
-        creation.update({'exp':expiries})
-        return jwt.encode(creation,jwt_key,algorithm=jwt_algorithm)
-    
-
-    async def verifying_the_refresh_tokens(self,user_data:USERACCOUNT,expiry:timedelta,session:AsyncSession):
-        refresh_load=jwt.decode(user_data,jwt_key,algorithms=[jwt_algorithm])
-        username:str=refresh_load.get('sub')
-        client_no:int=refresh_load.get('client_no')
-        email_id:str=refresh_load.get('email_id')
-        if (username or client_no or email_id) is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='UNAUTHORIZED ACCESS ')
-        return True
-    
-        
-
-
-    
-
-
-
-        
-
-    
-    
-
-
-
-
-
-            
-
-helper=SENSIBULL_HELPER()
-
-@router.post('/create/user/account/')
-async def create_user_account(user_data:USERACCOUNT,session:AsyncSession=Depends(get_session)):
-    verify_user=await helper.verify_user(user_data,session)
-    if verify_user:
-        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,detail='USER WITH THESE CREDENTIALS ALREADY EXISTS PLEASE LOGIN FOR MORE DETAILS ')
-    user_account=await helper.create_new_user(user_data,session)
-    if user_account is None:
-        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED,detail='PLEASE ENTER VALID DETAILS TO CREATE THE ACCOUNT')
-    
-    return JSONResponse(content={
-        'INFO':'ACCOUNT SUCCESFULLY CREATED PLEASE DO LOGIN FOR A NEW START'
-    })
-
-
-@router.post('/user/login/')
-async def user_login(user_data:USERACCOUNT,session:AsyncSession=Depends(get_session)):
-    user_verify=await helper.verify_user(user_data,session)
-    if user_verify is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE LOGIN TO GET THE ACCESS TOKENS ')
-    access_tokens=await helper.creating_the_access_token(user_data,timedelta(days=1))
-    if access_tokens is None:
-        raise HTTPException(status_code=status.HTTP_204_NO_CONTENT,detail='UNABLE TO GENERATE THE ACCESS TOKENS ')
-    refresh_tokens=await helper.creating_the_refresh_token(user_data,timedelta(days=365))
-    if refresh_tokens is None:
-        raise HTTPException(status_code=status.HTTP_204_NO_CONTENT,detail='SERVER DOWN PLEASE TRY LATER')
-    client_dataset={
-        'CLIENT_ID':user_data.CLIENT_ID,
-        'ACCESS_TOKENS':access_tokens,
-        'REFRESH_TOKENS':refresh_tokens
-    }
-    redis_set=await sensibull.state.redis.set('client',json.dumps(client_dataset),ex=4800)
-    return JSONResponse(conetent={
-        'ACCESS_TOKEN':access_tokens,
-        'REFRESH_TOKENS':refresh_tokens,
-        'CLIENT_NAME':user_data.NAME,
-        
-    })
-    
-
-
-@router.post('/place/order')
+@router.post('/place/order/')
 async def placing_the_new_orders(orderplace:list[ORDERPLACING],verify_access=Depends(helper.verifying_the_refresh_tokens),verify_refresh=Depends(helper.verifying_the_refresh_tokens),session:AsyncSession=Depends(get_session)):
     
     if verify_access is not None:
@@ -973,9 +624,6 @@ async def placing_the_new_orders(orderplace:list[ORDERPLACING],verify_access=Dep
             
             else:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE LOGIN TO PLACE THE ORDERS')
-
-
-
 
 
 

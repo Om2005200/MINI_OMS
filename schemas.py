@@ -13,10 +13,13 @@ from typing import List,Optional
 class USERDATABASE(SQLModel,table=True):
     __tablename__='SENSIBULL_ACCOUNT'
     id:Optional[int]=Field(default=None,primary_key=True)
+    CLIENT_ID:str
     NAME:str
     EMAIL_ID:str
     CONTACT_NO:int
     PASSWORD:str
+    ACCESS_TOKENS:str
+    REFRESH_TOKENS:str
     
 
 class OVERNIGHT_ORDERS(SQLModel,table=True):
@@ -42,7 +45,7 @@ class OVERNIGHT_ORDERS(SQLModel,table=True):
     ORDER_CATEGORY:str
     TARGET_PRICE:str
     STOP_LOSS: Optional[str] = Field(default=None,primary_key=True)
-    
+
     
 
 class INTRADAY_ORDERS(SQLModel,table=True):
