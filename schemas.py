@@ -36,10 +36,8 @@ class OVERNIGHT_ORDERS(SQLModel,table=True):
     EXIT_PRICE:str
     ENTRY_TIME:str
     EXIT_TIME:str
-    EXIT_PRICE:str
     TOTAL_INVESTED_AMT:str
     CLIENT_ID:str
-    ORDER_ID:str
     STATUS:str
     EXCHANGETOKEN:str
     ORDER_CATEGORY:str
@@ -62,11 +60,10 @@ class INTRADAY_ORDERS(SQLModel,table=True):
     EXIT_PRICE:str
     ENTRY_TIME:str
     EXIT_TIME:str
-    EXIT_PRICE:str
-    TOTAL_INVESTED_AMT:str
     CLIENT_ID:str
     ORDER_ID:str
     STOP_LOSS:str
+    TARGET_PRICE:str
     ORDER_CATEGORY:str
 
 

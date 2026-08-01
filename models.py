@@ -5,20 +5,19 @@ from typing import Optional,List
 
 
 class ORDERPLACING(BaseModel):
+   CLIENT_ID:str
    STOCK_NAME:str
    SYMBOL:str
    QUANTITY:str
    ENTRY_PRICE:str
-   EXIT_PRICE:Optional[str]
    INSTRUMENT_TYPE:str
    POSITION_TYPE:str
-   EXPIRY:str
-   CLIENT_ID:str
-   ORDER_ID:str
-   ENTRY_TIME:Optional[int]
-   EXIT_TIME:Optional[int]
-   STOP_LOSS:str
-   ORDER_CATEGORY:str
+   STOP_LOSS:Optional[str]
+   TARGET_PRICE:Optional[str]
+   FNO:bool=False
+   
+
+   
 
 class USERVERIFY(BaseModel):
     EMAIL:str
