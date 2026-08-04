@@ -16,7 +16,7 @@ class ORDERPLACING(BaseModel):
    TARGET_PRICE:Optional[str]
    FNO:bool=False
    ORDER_TYPE:str
-   
+   ORDER_CATEGORY:str
    
 
    

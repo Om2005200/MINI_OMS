@@ -15,7 +15,7 @@ from models import ORDERPLACING,USERVERIFY,USERACCOUNT,TOKENS
 from concurrent.futures import ProcessPoolExecutor
 from sqlmodel import SQLModel
 from sqlalchemy.ext.asyncio import create_async_engine,AsyncSession
-from schemas import USERDATABASE,OVERNIGHT_ORDERS
+from schemas import USERDATABASE,ORDER_DATABASE
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordRequestForm,OAuth2PasswordBearer,oauth2
 import random
@@ -39,7 +39,7 @@ engine=create_async_engine(database_url,echo=True)
 @mini_sensibull.on_event('startup')
 async def startup():
     await init_db()
-    await SENSE.getting_the_master_scripts_data()
+    await s.pre_processing_the_helpers()
     
 
 async def init_db():
@@ -76,16 +76,17 @@ class SENSE:
             json.dump(main_data,x,indent=4)
         return main_data
         
-    def getting_the_live_prices(self):
+    def getting_the_live_prices(self,trade_symbol:str):
         pass
 
     async def pre_processing_the_helpers(self):
         loop_scanner=asyncio.get_running_loop()
         with ProcessPoolExecutor() as executor:
             task1=loop_scanner.run_in_executor(executor,self.getting_the_master_scripts_data)
+            final_master=await task1
+            return final_master
+        
            
-           
-            await task1
 
 
     
@@ -94,96 +95,144 @@ class SENSE:
 
     
 
+    
+    async def placing_the_orders(self,orders:list[dict],session:AsyncSession):
+        master_orders=orders
+        print(master_orders)
+        placed_orders=[]
+        master_data_book=await self.pre_processing_the_helpers()
+        for datas in master_orders:
+            master_stock_name=datas['STOCK_NAME']
+            master_client_id=datas['CLIENT_ID']
+            master_symbol=datas['SYMBOL']
+            master_quantity=datas['QUANTITY']
+            master_instrumentype=datas['INSTRUMENT_TYPE']
+            master_position_type=datas['POSITION_TYPE']
+            stop_loss=datas['STOP_LOSS']
+            order_type=datas['ORDER_TYPE']
+            master_quantity=datas['QUANTITY']
+            target_price=datas['TARGET_PRICE']
+            order_category=datas['ORDER_CATEGORY']
+            if order_type=='SELL':
+                for new_book in master_data_book:
+                    original_symbol=new_book['symbol']
+                    if master_symbol==original_symbol:
+                        original_strikeprice=new_book['strike']
+                        original_expiry=new_book['expiry']
+                        original_lot_size=new_book['lotsize']
+                        original_instrumentype=new_book['instrumenttype']
+                        original_exch_seg=new_book['exch_seg']
+                        original_name=new_book['name']
+                        #original_exchangetoken=new_book['exchangetoken']
+                        #original_price=self.getting_the_live_prices(master_symbol)
+                        original_price='NA'
+                        
+                        order_placing={
+                            'CLIENT_ID':master_client_id,
+                            'TRADINGSYMBOL':master_symbol,
+                            'STRIKEPRICE':original_strikeprice,
+                            'EXPIRY':original_expiry,
+                            'QUANTITY':original_lot_size,
+                            'EXIT_PRICE':'NA',
+                            'ENTRY_PRICE':original_price,
+                            'ENTRY_TIME':datetime.now().strftime('%H:%Y'),
+                            'EXIT_TIME':'NA',
+                            'TOTAL_INVESTED_AMT':original_lot_size,
+                            'STATUS':'OPEN',
+                            'ORDER_CATEGORY':order_category,
+                            'TARGET_PRICE':target_price,
+                            'STOP_LOSS':stop_loss,
+                            'STOCK_NAME':original_name,
+                            'INSTRUMENT_TYPE':original_instrumentype,
+                            'EXCHANGE_SEGMENT':original_exch_seg,
+                        
+
+                        }
+                        placed_orders.append(order_placing)
+
+                       
+                    
+            elif order_type=='BUY':
+                for new_buy in master_data_book:
+                    new_buy_symbol=new_buy['symbol']
+                    if master_symbol==new_buy_symbol:
+                        buy_strikeprice=new_buy['strike']
+                        buy_instrumenttype=new_buy['instrumenttype']
+                        buy_expiry=new_buy['expiry']
+                        buy_quantity=master_quantity
+                        #buy_entry_price=self.getting_the_live_prices(new_buy_symbol)
+                        buy_entry_price='NA'
+                        
+                        buy_lot_size=new_buy['lotsize']
+                        buy_name=new_buy['name']
+                        exchangesegment=new_buy['exch_seg']
+
+                        order_buy={
+                            'CLIENT_ID':master_client_id,
+                            'TRADINGSYMBOL':master_symbol,
+                            'STRIKEPRICE':buy_strikeprice,
+                            'INSTRUMENT_TYPE':buy_instrumenttype,
+                            'EXPIRY':buy_expiry,
+                            'QUANTITY':buy_quantity,
+                            'ENTRY_PRICE':buy_entry_price,
+                            'EXIT_PRICE':'NA',
+                            'ENTRY_TIME':datetime.now().strftime("%H:%Y"),
+                            'EXIT_TIME':'NA',
+                            'TOTAL_INVESTED_AMT':buy_lot_size,
+                            'STATUS':'OPEN',
+                            'STOCK_NAME':buy_name,
+                            'EXCHANGE_SEGMENT':exchangesegment,
+                            'ORDER_CATEGORY':order_category,
+                            'TARGET_PRICE':target_price,
+                            'STOP_LOSS':stop_loss
+                        }
+                        placed_orders.append(order_buy)
+        print("Placed Orders:", placed_orders)
+        for orde in placed_orders:
+            db_order=ORDER_DATABASE(**orde)
+            session.add(db_order)
+        await session.commit()
+
+        return placed_orders
+    
+    
 
 
 
-    async def order_processing(self,orders:dict,session:AsyncSession):
-        master_data=await self.getting_the_master_scripts_data()        
-        main_orders=orders
-        for order in main_orders:
-            stock_name=order['STOCK_NAME']
-            symbol=order['SYMBOL']
-            quantity=order['QUANTITY']
-            entry_price=orders['ENTRY_PRICE']
-            exit_price=orders['EXIT_PRICE']
-            instrumentype=orders['INSTRUMENT_TYPE']
-            position_type=orders['POSITION_TYPE']
-            expiry=orders['EXPIRY']
-            stop_loss=orders['STOP_LOSS']
-            target_price=orders['TARGET_PRICE']
-            order_category=orders['ORDER_CATEGORY']
-            client_id=orders['CLIENT_ID']
-            #exchnagetoken=orders['EXCHANGETOKEN']
-            
-            if order_category=='DELIVERY':
-                if position_type=='SELL':
-                    for datas in master_data:
-                        master_symbol=datas['tradingsymbol']
-                        if master_symbol==symbol:
-                            original_strikeprice=datas['strikeprice']
-                            original_expiry=datas['expiry']
-                            original_instrumenttype=datas['instrumenttype']
-                            original_lotsize=datas['lotsize']
-                            original_name=datas['name']
-                            original_strike=datas['strikeprice']
-                            original_entry_price=self.getting_the_live_prices(master_symbol)
-                            exchangetoken=datas['exchangetoken']
-                            order_placing={
-                                'STOCK_NAME':original_name,
-                                'STRIKEPRICE':original_strikeprice,
-                                'EXPIRY':original_expiry,
-                                'QUANTITY':original_lotsize*quantity,
-                                'INSTRUMENTTYPE':original_instrumenttype,
-                                'POSITION_TYPE':position_type,
-                                'ENTRY_PRICE':self.getting_the_live_prices(master_symbol),
-                                'EXIT_PRICE':'NA',
-                                'ENTRY_TIME':datetime.now().strftime("%H:%Y"),
-                                'EXIT_TIME':'NA',
-                                'TOTAL_INVESTED_AMT':original_entry_price*original_lotsize*quantity,
-                                'CLIENT_ID':client_id,
-                                'STATUS':'OPEN',
-                                'EXCHANGETOKEN':exchangetoken,
-                                'ORDER_CATEGORY':'DELIVERY',
-                                'TARGET_PRICE':target_price,
-                                'STOP_LOSS':stop_loss,
-                                
-                            }
-                            session.add(order_placing)
-                            await session.commit()
-                            await session.refresh(order_placing)
-                elif position_type=='BUY':
-                    for buy_datas in master_data:
-                        buy_symbol=buy_datas['symbol']
-                        if buy_symbol==symbol:
-                            b_original_strikeprice=buy_datas['strikeprice']
-                            b_original_expiry=buy_datas['expiry']
-                            b_original_lot_size=buy_datas['lot_size']
-                            b_original_instrumenttype=datas['instrumenttype']
-                            b_original_exchangetoken=datas['exhcangetoken']
-                            b_entry_price=self.getting_the_live_prices(buy_symbol)
-                            b_original_name=datas['name']
-                            order_placing={
-                                'STOCK_NAME':b_original_name,
-                                'STRIKEPRICE':b_original_strikeprice,
-                                'EXPIRY':b_original_expiry,
-                                'QUANTITY':b_original_lot_size*quantity,
-                                'INSTRUMENTTYPE':b_original_instrumenttype,
-                                'POSITION_TYPE':position_type,
-                                'ENTRY_PRICE':self.getting_the_live_prices(buy_symbol),
-                                'EXIT_PRICE':'NA',
-                                'ENTRY_TIME':datetime.now().strftime("%H:%Y"),
-                                'EXIT_TIME':'NA',
-                                'TOTAL_INVESTED_AMT':b_entry_price*b_original_lot_size*quantity,
-                                'CLIENT_ID':client_id,
-                                'STATUS':'OPEN',
-                                'EXCHANGETOKEN':b_original_exchangetoken,
-                                'ORDER_CATEGORY':order_category,
-                                'TARGET_PRICE':target_price,
-                                'STOP_LOSS':stop_loss
-                            }
-                            session.add(order_placing)
-                            await session.commit()
-                            await session.refresh(order_placing)
+                    
+
+
+
+
+                    
+
+
+
+
+        
+
+
+
+s=SENSE()
+@router.post('/order/placing/')
+
+async def placing_the_router_orders(order_model:List[ORDERPLACING],session:AsyncSession=Depends(get_session)):
+    orders=[order.model_dump() for order in order_model]
+    order_place=await s.placing_the_orders(orders,session)
+
+    if order_place is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail='ORDER_NOT PLACED')
+    return JSONResponse(content={
+        'mesaage':'ORDER_PLACED_SUCCESFULLY',
+        
+    })
+mini_sensibull.include_router(router)
+
+
+
+
+
+
 
 
                             

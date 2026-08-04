@@ -21,30 +21,29 @@ class USERDATABASE(SQLModel,table=True):
     ACCESS_TOKENS:str
     REFRESH_TOKENS:str
     
-
-class OVERNIGHT_ORDERS(SQLModel,table=True):
+class ORDER_DATABASE(SQLModel,table=True):
     __tablename__='MINI_SENSIBULL'
     id:Optional[int]=Field(default=None,primary_key=True)
-    TRADINGSYMBOL:str
+    CLIENT_ID:str
     STOCK_NAME:str
+    TRADINGSYMBOL:str
     STRIKEPRICE:str
     EXPIRY:str
     QUANTITY:str
-    INSTRUMENTYPE:str
-    POSITION_TYPE:str
+    EXIT_PRICE:str
     ENTRY_PRICE:str
     EXIT_PRICE:str
     ENTRY_TIME:str
     EXIT_TIME:str
     TOTAL_INVESTED_AMT:str
-    CLIENT_ID:str
     STATUS:str
-    EXCHANGETOKEN:str
-    ORDER_CATEGORY:str
+    ORDER_CATEGORY:str='DELIVERY'
     TARGET_PRICE:str
-    STOP_LOSS: Optional[str] = Field(default=None,primary_key=True)
+    STOP_LOSS:str
+    INSTRUMENT_TYPE:str
+    EXCHANGE_SEGMENT:str
 
-    
+
 
 class INTRADAY_ORDERS(SQLModel,table=True):
     __tablename__='INTRADAY_ORDERS'
