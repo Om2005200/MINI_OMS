@@ -15,6 +15,8 @@ class ORDERPLACING(BaseModel):
    STOP_LOSS:Optional[str]
    TARGET_PRICE:Optional[str]
    FNO:bool=False
+   ORDER_TYPE:str
+   
    
 
    
