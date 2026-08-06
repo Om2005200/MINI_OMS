@@ -16,10 +16,8 @@ class USERDATABASE(SQLModel,table=True):
     CLIENT_ID:str
     NAME:str
     EMAIL_ID:str
-    CONTACT_NO:int
+    CONTACT_NO:str
     PASSWORD:str
-    ACCESS_TOKENS:str
-    REFRESH_TOKENS:str
     
 class ORDER_DATABASE(SQLModel,table=True):
     __tablename__='ORDER_DATABASE'

@@ -36,6 +36,7 @@ engine=create_async_engine(database_url,echo=True)
 
 
 
+
 @mini_sensibull.on_event('startup')
 async def startup():
     await init_db()
@@ -204,8 +205,14 @@ class SENSE:
         await session.commit()
 
         return placed_orders
+
+
+
+
+
     
-    
+
+
 
 
 
@@ -224,18 +231,134 @@ class SENSE:
 
 
 s=SENSE()
+
+class HELPERS:
+    async def verify_the_user(self,user_model:USERACCOUNT,session:AsyncSession):
+        user_creation=select(USERDATABASE).where(USERDATABASE.CONTACT_NO==user_model.CONTACT_NO,USERDATABASE.EMAIL_ID==user_model.EMAIL_ID)
+        execution=await session.execute(user_creation)
+        response=execution.first()
+        if response is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE CREATE AN ACCOUNT TO ACCESS')
+
+
+    async def creating_the_access_tokens(self,user_model:USERACCOUNT):
+        encode={'sub':user_model.CLIENT_ID,'email_id':user_model.EMAIL_ID}
+        expires=datetime.utcnow()+timedelta(hours=2)
+        encode.update({'exp':expires})
+        return jwt.encode(encode,jwt_key,algorithm=jwt_algorithm)
+
+
+
+    async def creating_the_refresh_tokens(self,user_model:USERACCOUNT):
+        encode={'sub':user_model.EMAIL_ID,'id':user_model.NAME}
+        expires=datetime.utcnow()+timedelta(days=1)
+        encode.update({'exp':expires})
+        return jwt.encode(encode,jwt_key,algorithm=jwt_algorithm)
+
+
+    async def user_exists(self,user_model:USERACCOUNT,session:AsyncSession):
+        check_user=select(USERDATABASE).where(USERDATABASE.EMAIL_ID==user_model.EMAIL_ID,USERDATABASE.PASSWORD==user_model.PASSWORD)
+        execution=await session.execute(check_user)
+        response=execution.first()
+        return response
+
+
+
+    
+
+
+
+
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+h=HELPERS()
+
+
+@router.post('/create/account/')
+async def create_account(user_model:USERACCOUNT,session:AsyncSession=Depends(get_session)):
+    user_exists=await h.user_exists(user_model,session)
+    if user_exists is not  None:
+        return JSONResponse(content={
+            'message':'USER EXISTS PLEASE LOGIN'
+        })
+    else:
+        new_user=USERDATABASE(CLIENT_ID=user_model.CLIENT_ID,NAME=user_model.NAME,EMAIL_ID=user_model.EMAIL_ID,PASSWORD=user_model.PASSWORD,CONTACT_NO=user_model.CONTACT_NO)
+        access_tokens=await h.creating_the_access_tokens(user_model)
+        refresh_tokens= await h.creating_the_refresh_tokens(user_model)
+
+        session.add(new_user)
+        await session.commit()
+        await session.refresh(new_user)
+        return JSONResponse({
+            'STATUS':'ACCOUNT CREATED SUCCESFULLY',
+            'REFRESH_TOKENS':refresh_tokens,
+            'ACCESS_TOKENS':access_tokens
+        })
+
+
+@router.get('/create/access_tokens/')
+async def creating_the_access_tokens(user_model:USERACCOUNT,session:AsyncSession=Depends(get_session)):
+    user_verify=await h.user_exists(user_model,session)
+    if user_verify is not None:
+        access_tokens=await h.creating_the_access_tokens(user_model)
+        if access_tokens is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail='UNABLE TO CREATE THE ACCESS TOKENS DUE TO HEAVY TRAFFIC PLESE RETRY AFTER SOMETIMES ')
+        return JSONResponse({
+            'STATUS':"ACCESS_TOKENS_CREATED",
+            'ACCESS_TOKENS':access_tokens
+        })
+
+
+
+
+
+    
+
+
+
+
+
+
+
 @router.post('/order/placing/')
 
-async def placing_the_router_orders(order_model:List[ORDERPLACING],session:AsyncSession=Depends(get_session)):
-    orders=[order.model_dump() for order in order_model]
-    order_place=await s.placing_the_orders(orders,session)
+async def placing_the_router_orders(order_model:List[ORDERPLACING],user_model:USERACCOUNT,session:AsyncSession=Depends(get_session)):
+    user_verify=await h.user_exists(user_model.EMAIL_ID,user_model.PASSWORD,session)
+    if user_verify is  not None:
+        orders=[order.model_dump() for order in order_model]
+        order_place=await s.placing_the_orders(orders,session)
 
-    if order_place is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail='ORDER_NOT PLACED')
-    return JSONResponse(content={
-        'mesaage':'ORDER_PLACED_SUCCESFULLY',
-        
-    })
+        if order_place is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail='ORDER_NOT PLACED')
+        return JSONResponse(content={
+            'mesaage':'ORDER_PLACED_SUCCESFULLY',
+            
+        })
+
+
+
+
+
+
+
+
+
+
+    
 mini_sensibull.include_router(router)
 
 

@@ -29,7 +29,7 @@ class USERACCOUNT(BaseModel):
     CLIENT_ID:str
     NAME:str
     EMAIL_ID:str
-    CONTACT_NO:int
+    CONTACT_NO:str
     PASSWORD:str
 
 class TOKENS(BaseModel):
