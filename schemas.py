@@ -22,7 +22,7 @@ class USERDATABASE(SQLModel,table=True):
     REFRESH_TOKENS:str
     
 class ORDER_DATABASE(SQLModel,table=True):
-    __tablename__='MINI_SENSIBULL'
+    __tablename__='ORDER_DATABASE'
     id:Optional[int]=Field(default=None,primary_key=True)
     CLIENT_ID:str
     STOCK_NAME:str

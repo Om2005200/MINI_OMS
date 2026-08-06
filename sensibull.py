@@ -85,7 +85,17 @@ class SENSE:
             task1=loop_scanner.run_in_executor(executor,self.getting_the_master_scripts_data)
             final_master=await task1
             return final_master
-        
+    def reading_the_master_file(self):
+        with open(r"C:\Users\dasho\angelone_srip_master_for_mini_sensibull.json",'r') as d:
+            data=json.load(d)
+            return data
+    async def processing_the_files(self):
+        loop=asyncio.get_running_loop()
+        with ProcessPoolExecutor() as runner:
+            task=loop.run_in_executor(runner,self.reading_the_master_file)
+            final_task=await task
+            return final_task
+           
            
 
 
@@ -100,7 +110,7 @@ class SENSE:
         master_orders=orders
         print(master_orders)
         placed_orders=[]
-        master_data_book=await self.pre_processing_the_helpers()
+        master_data_book=await self.processing_the_files()
         for datas in master_orders:
             master_stock_name=datas['STOCK_NAME']
             master_client_id=datas['CLIENT_ID']
