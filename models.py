@@ -34,7 +34,7 @@ class USERACCOUNT(BaseModel):
 
 class TOKENS(BaseModel):
     ACCESS_TOKENS:str
-    JWT_KEY:str
+    REFRESH_TOKENS:str
 
 # class ORDERPARAM(BaseModel):
 #     ACCESS_TOKEN:str

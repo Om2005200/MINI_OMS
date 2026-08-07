@@ -263,6 +263,36 @@ class HELPERS:
         return response
 
 
+    async def decoding_the_access_tokens(self,user_model:TOKENS,session:AsyncSession):
+        payload=jwt.decode(jwt_key,algorithms=[jwt_algorithm])
+        client_id=payload.get('sub')
+        email_id=payload.get('id')
+        main_checker=select(USERDATABASE).where(USERDATABASE.CLIENT_ID==client_id,USERDATABASE.EMAIL_ID==email_id)
+        if main_checker is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE ENTER VALID TOKENS TO ACCESS THE DATAS')
+
+        
+
+    async def decoding_the_refresh_tokens(self,user_input:TOKENS,session:AsyncSession):
+        payload=jwt.decode(jwt_key,algorithms=[jwt_algorithm])
+        email_id=payload.get('sub')
+        name=payload.get('id')
+        modeia_checker=select(USERDATABASE).where(USERDATABASE.EMAIL_ID==email_id,USERDATABASE.NAME==name)
+        if modeia_checker is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE ENTER VALID DETAILS TO ACCESS THE DATAS')
+
+
+
+
+        
+        
+
+
+
+        
+
+
+
 
     
 
@@ -324,6 +354,10 @@ async def creating_the_access_tokens(user_model:USERACCOUNT,session:AsyncSession
 
 
 
+    
+
+
+
 
 
     
@@ -336,18 +370,19 @@ async def creating_the_access_tokens(user_model:USERACCOUNT,session:AsyncSession
 
 @router.post('/order/placing/')
 
-async def placing_the_router_orders(order_model:List[ORDERPLACING],user_model:USERACCOUNT,session:AsyncSession=Depends(get_session)):
-    user_verify=await h.user_exists(user_model.EMAIL_ID,user_model.PASSWORD,session)
+async def placing_the_router_orders(order_model:List[ORDERPLACING],user_model:TOKENS,session:AsyncSession=Depends(get_session)):
+    user_verify=await h.decoding_the_refresh_tokens(user_model.REFRESH_TOKENS)
     if user_verify is  not None:
         orders=[order.model_dump() for order in order_model]
         order_place=await s.placing_the_orders(orders,session)
 
         if order_place is None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail='ORDER_NOT PLACED')
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail='ORDER_NOT_PLACED')
         return JSONResponse(content={
             'mesaage':'ORDER_PLACED_SUCCESFULLY',
             
         })
+
 
 
 
