@@ -210,6 +210,17 @@ class SENSE:
 
 
 
+
+    def managing_the_orders(self,main_orders:ORDER_DATABASE):
+        org_orders=main_orders
+        for orders in org_orders:
+            
+        
+
+
+
+
+
     
 
 
@@ -268,7 +279,10 @@ class HELPERS:
         client_id=payload.get('sub')
         email_id=payload.get('id')
         main_checker=select(USERDATABASE).where(USERDATABASE.CLIENT_ID==client_id,USERDATABASE.EMAIL_ID==email_id)
-        if main_checker is None:
+        execution=await session.execute(main_checker)
+        response=execution.first()
+        
+        if response is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE ENTER VALID TOKENS TO ACCESS THE DATAS')
 
         
@@ -277,42 +291,15 @@ class HELPERS:
         payload=jwt.decode(jwt_key,algorithms=[jwt_algorithm])
         email_id=payload.get('sub')
         name=payload.get('id')
-        modeia_checker=select(USERDATABASE).where(USERDATABASE.EMAIL_ID==email_id,USERDATABASE.NAME==name)
-        if modeia_checker is None:
+        media_checker=select(USERDATABASE).where(USERDATABASE.EMAIL_ID==email_id,USERDATABASE.NAME==name)
+        execution=await session.execute(media_checker)
+        response=execution.first()
+
+        if response is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE ENTER VALID DETAILS TO ACCESS THE DATAS')
 
 
-
-
         
-        
-
-
-
-        
-
-
-
-
-    
-
-
-
-
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 h=HELPERS()
@@ -354,6 +341,12 @@ async def creating_the_access_tokens(user_model:USERACCOUNT,session:AsyncSession
 
 
 
+
+
+    
+
+
+
     
 
 
@@ -382,6 +375,9 @@ async def placing_the_router_orders(order_model:List[ORDERPLACING],user_model:TO
             'mesaage':'ORDER_PLACED_SUCCESFULLY',
             
         })
+
+
+
 
 
 
