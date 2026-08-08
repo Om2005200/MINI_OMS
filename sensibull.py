@@ -41,6 +41,8 @@ engine=create_async_engine(database_url,echo=True)
 async def startup():
     await init_db()
     await s.pre_processing_the_helpers()
+    while True:
+        s.managing_the_orders(main_orders=USERDATABASE)
     
 
 async def init_db():
@@ -156,6 +158,7 @@ class SENSE:
                             'STOCK_NAME':original_name,
                             'INSTRUMENT_TYPE':original_instrumentype,
                             'EXCHANGE_SEGMENT':original_exch_seg,
+                            'ORDER_TYPE':'SELL'
                         
 
                         }
@@ -195,7 +198,8 @@ class SENSE:
                             'EXCHANGE_SEGMENT':exchangesegment,
                             'ORDER_CATEGORY':order_category,
                             'TARGET_PRICE':target_price,
-                            'STOP_LOSS':stop_loss
+                            'STOP_LOSS':stop_loss,
+                            'ORDER_TYPE':'BUY'
                         }
                         placed_orders.append(order_buy)
         print("Placed Orders:", placed_orders)
@@ -211,11 +215,71 @@ class SENSE:
 
 
 
-    def managing_the_orders(self,main_orders:ORDER_DATABASE):
-        org_orders=main_orders
+    async def managing_the_orders(self,session:AsyncSession):
+        main_orders=select(ORDER_DATABASE)
+        execution=await session.execute(main_orders)
+        response=execution.scalars().all()
+        master_data=self.processing_the_files()
+        current_date=datetime.now().strftime("%H:%Y")
+        current_time=datetime.now()
+        org_orders=response
         for orders in org_orders:
-            
-        
+            client_id=orders.CLIENT_ID
+            strikeprice=orders.STRIKEPRICE
+            tradingsymbol=orders.TRADINGSYMBOL
+            quantity=orders.QUANTITY
+            entry_price=orders.ENTRY_PRICE
+            order_category=orders.ORDER_CATEGORY
+            stop_loss=orders.STOP_LOSS
+            target_price=orders.TARGET_PRICE
+            order_type=orders.ORDER_TYPE
+
+
+
+
+            if order_type=='SELL':
+                if order_category=='DELIVERY':
+                    for master_ in master_data:
+                        symbol=master_['tradingsymbol']
+                        if symbol==tradingsymbol:
+                            master_expiry=master_['expiry']
+                            if stop_loss is not None:
+                                if target_price is not None:
+                                    if current_time<='15:25':
+
+                                        if current_date!=master_expiry:
+
+                                        
+                                            current_price=self.getting_the_live_prices(symbol)
+                                            if current_price>=target_price:
+                                                orders['EXIT_TIME']=datetime.now().strftime("%h:%Y")
+                                                orders['EXIT_PRICE']=current_price
+
+
+
+                                        
+
+
+                            elif stop_loss is None:
+                                if stop_loss is None:
+                                    if target_price is not None:
+                                        if current_time<='15:25':
+                                            if current_date!=master_expiry:
+                                                current_price=self.getting_the_live_prices(symbol)
+                                                if current_price>=target_price:
+                                                    orders['EXIT_TIME']=datetime.now().strftime("%H:%Y")
+                                                    orders['EXIT_PRICE']=current_price
+
+
+
+
+
+                                                    
+
+
+
+
+
 
 
 

@@ -40,6 +40,7 @@ class ORDER_DATABASE(SQLModel,table=True):
     STOP_LOSS:str
     INSTRUMENT_TYPE:str
     EXCHANGE_SEGMENT:str
+    ORDER_TYPE:str
 
 
 
