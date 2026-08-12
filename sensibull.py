@@ -103,112 +103,88 @@ class SENSE:
 
 
     
-
-
-
-    
-
-    
     async def placing_the_orders(self,orders:list[dict],session:AsyncSession):
         master_orders=orders
-        print(master_orders)
-        placed_orders=[]
-        master_data_book=await self.processing_the_files()
-        for datas in master_orders:
-            master_stock_name=datas['STOCK_NAME']
-            master_client_id=datas['CLIENT_ID']
-            master_symbol=datas['SYMBOL']
-            master_quantity=datas['QUANTITY']
-            master_instrumentype=datas['INSTRUMENT_TYPE']
-            master_position_type=datas['POSITION_TYPE']
-            stop_loss=datas['STOP_LOSS']
-            order_type=datas['ORDER_TYPE']
-            master_quantity=datas['QUANTITY']
-            target_price=datas['TARGET_PRICE']
-            order_category=datas['ORDER_CATEGORY']
-            if order_type=='SELL':
-                for new_book in master_data_book:
-                    original_symbol=new_book['symbol']
-                    if master_symbol==original_symbol:
-                        original_strikeprice=new_book['strike']
-                        original_expiry=new_book['expiry']
-                        original_lot_size=new_book['lotsize']
-                        original_instrumentype=new_book['instrumenttype']
-                        original_exch_seg=new_book['exch_seg']
-                        original_name=new_book['name']
-                        #original_exchangetoken=new_book['exchangetoken']
-                        #original_price=self.getting_the_live_prices(master_symbol)
-                        original_price='NA'
-                        
-                        order_placing={
-                            'CLIENT_ID':master_client_id,
-                            'TRADINGSYMBOL':master_symbol,
-                            'STRIKEPRICE':original_strikeprice,
-                            'EXPIRY':original_expiry,
-                            'QUANTITY':original_lot_size,
-                            'EXIT_PRICE':'NA',
-                            'ENTRY_PRICE':original_price,
-                            'ENTRY_TIME':datetime.now().strftime('%H:%Y'),
-                            'EXIT_TIME':'NA',
-                            'TOTAL_INVESTED_AMT':original_lot_size,
-                            'STATUS':'OPEN',
-                            'ORDER_CATEGORY':order_category,
-                            'TARGET_PRICE':target_price,
-                            'STOP_LOSS':stop_loss,
-                            'STOCK_NAME':original_name,
-                            'INSTRUMENT_TYPE':original_instrumentype,
-                            'EXCHANGE_SEGMENT':original_exch_seg,
-                            'ORDER_TYPE':'SELL'
-                        
+        old_orders=select(ORDER_DATABASE)
+        execution=await session.execute(old_orders)
+        response=execution.scalars().all()
 
-                        }
-                        placed_orders.append(order_placing)
+        
+        for new_orders in master_orders:
+            client_id=new_orders['CLIENT_ID']
+            stock_name=new_orders['STOCK_NAME']
+            symbol=new_orders['SYMBOL']
+            quantity=new_orders['QUANTITY']
+            entry_price=new_orders['ENTRY_PRICE']
+            exit_price=new_orders['EXIT_PRICE']
+            instrument_type=new_orders['INSTRUMENT_TYPE']
+            position_type=new_orders['POSITION_TYPE']
+            stop_loss=new_orders['STOP_LOSS']
+            target_price=new_orders['TARGET_PRICE']
+            order_type=new_orders['ORDER_TYPE']
+            order_category=new_orders['ORDER_CATEGORY']
+            fno=new_orders['FNO']
 
-                       
-                    
-            elif order_type=='BUY':
-                for new_buy in master_data_book:
-                    new_buy_symbol=new_buy['symbol']
-                    if master_symbol==new_buy_symbol:
-                        buy_strikeprice=new_buy['strike']
-                        buy_instrumenttype=new_buy['instrumenttype']
-                        buy_expiry=new_buy['expiry']
-                        buy_quantity=master_quantity
-                        #buy_entry_price=self.getting_the_live_prices(new_buy_symbol)
-                        buy_entry_price='NA'
-                        
-                        buy_lot_size=new_buy['lotsize']
-                        buy_name=new_buy['name']
-                        exchangesegment=new_buy['exch_seg']
 
-                        order_buy={
-                            'CLIENT_ID':master_client_id,
-                            'TRADINGSYMBOL':master_symbol,
-                            'STRIKEPRICE':buy_strikeprice,
-                            'INSTRUMENT_TYPE':buy_instrumenttype,
-                            'EXPIRY':buy_expiry,
-                            'QUANTITY':buy_quantity,
-                            'ENTRY_PRICE':buy_entry_price,
-                            'EXIT_PRICE':'NA',
-                            'ENTRY_TIME':datetime.now().strftime("%H:%Y"),
-                            'EXIT_TIME':'NA',
-                            'TOTAL_INVESTED_AMT':buy_lot_size,
-                            'STATUS':'OPEN',
-                            'STOCK_NAME':buy_name,
-                            'EXCHANGE_SEGMENT':exchangesegment,
-                            'ORDER_CATEGORY':order_category,
-                            'TARGET_PRICE':target_price,
-                            'STOP_LOSS':stop_loss,
-                            'ORDER_TYPE':'BUY'
-                        }
-                        placed_orders.append(order_buy)
-        print("Placed Orders:", placed_orders)
-        for orde in placed_orders:
-            db_order=ORDER_DATABASE(**orde)
-            session.add(db_order)
-        await session.commit()
 
-        return placed_orders
+            for old in response:
+                client=old.CLIENT_ID
+                status=old.STATUS
+                symbols=old.TRADINGSYMBOL
+                name=old.STOCK_NAME
+                instrument=old.INSTRUMENT_TYPE
+                master_quantity=old.QUANTITY
+                old_order_type=old.ORDER_TYPE
+                strike=old.STRIKEPRICE
+                expiry=old.EXPIRY
+                entry_price=old.ENTRY_PRICE
+                entry_time=old.ENTRY_TIME
+                total_invested_value=old.TOTAL_INVESTED_AMT
+
+
+
+                if fno==True:
+
+                    if order_category=='DELIVERY':
+                        if order_type=='SELL':
+                            if instrument_type=='PE':
+                            
+                                if client_id==client_id:
+                                    old_client_status=old['STATUS']
+                                    if old_client_status=='OPEN':
+                                        if symbol==symbols:
+                                            if master_quantity==quantity:
+
+
+                                                if instrument_type==instrument:
+                                                    if old_order_type!=order_type:
+                                                        current_ltp=self.getting_the_live_prices(symbol)
+
+
+                                                        old['STATUS']='CLOSED'
+                                                        old['EXIT_TIME']=datetime.now().strftime("%H:%Y")
+                                                        old['EXIT_PRICE']=current_ltp
+                                                        old['ORDER_TYPE']='BUY'
+
+
+
+
+                                                        new_order=old
+
+
+                                                                                                                
+
+
+
+
+        
+            
+
+
+
+
+    
+
 
 
 
@@ -233,47 +209,23 @@ class SENSE:
             stop_loss=orders.STOP_LOSS
             target_price=orders.TARGET_PRICE
             order_type=orders.ORDER_TYPE
+            instrument_type=orders.INSTRUMENT_TYPE
 
 
 
 
             if order_type=='SELL':
                 if order_category=='DELIVERY':
-                    for master_ in master_data:
-                        symbol=master_['tradingsymbol']
-                        if symbol==tradingsymbol:
-                            master_expiry=master_['expiry']
-                            if stop_loss is not None:
-                                if target_price is not None:
-                                    if current_time<='15:25':
-
-                                        if current_date!=master_expiry:
-
-                                        
-                                            current_price=self.getting_the_live_prices(symbol)
-                                            if current_price>=target_price:
-                                                orders['EXIT_TIME']=datetime.now().strftime("%h:%Y")
-                                                orders['EXIT_PRICE']=current_price
+                    if instrument_type=='CE':
 
 
 
-                                        
-
-
-                            elif stop_loss is None:
-                                if stop_loss is None:
-                                    if target_price is not None:
-                                        if current_time<='15:25':
-                                            if current_date!=master_expiry:
-                                                current_price=self.getting_the_live_prices(symbol)
-                                                if current_price>=target_price:
-                                                    orders['EXIT_TIME']=datetime.now().strftime("%H:%Y")
-                                                    orders['EXIT_PRICE']=current_price
 
 
 
 
 
+                                        
                                                     
 
 
