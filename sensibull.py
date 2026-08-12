@@ -108,6 +108,7 @@ class SENSE:
         old_orders=select(ORDER_DATABASE)
         execution=await session.execute(old_orders)
         response=execution.scalars().all()
+        master_data=self.reading_the_master_file()
 
         
         for new_orders in master_orders:
@@ -170,6 +171,19 @@ class SENSE:
 
 
                                                         new_order=old
+
+
+
+                                    elif status=='CLOSED':
+                                        for new in master_data:
+                                            new_symbol=new['tradingsymbol']
+                                            if symbol==new_symbol:
+                                                nw_tradingsymbol=new['tradingsymbol']
+                                                nw_strikeprice=new['strikeprice']
+                                                nw_expiry=new['EXPIRY']
+                                                nw_quantity=new['QUANTITY']
+                                                
+
 
 
                                                                                                                 
