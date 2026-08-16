@@ -221,6 +221,67 @@ class SENSE:
                                                     'EXCHANGE_SEGMENT':n_exch_seg,
                                                     'ORDER_TYPE':'SELL'
                                                     }
+                                        elif order_type==old_order_type:
+                                            for latest in master_data:
+                                                l_strikeprice=latest['strikeprice']
+                                                l_expiry=latest['expiry']
+                                                l_exch_seg=latest['exch_seg']
+                                                l_instrument_type=latest['instrumenttype']
+                                                l_entry_price=self.getting_the_live_prices(symbols)
+                                                l_name=latest['name']
+                                                l_lot_size=latest['lot_size']
+
+                                                new_orders={
+                                                    'CLIENT_ID':client_id,
+                                                    'STOCK_NAME':l_name,
+                                                    'TRADINGSYMBOL':symbols,
+                                                    'STRIKEPRICE':l_strikeprice,
+                                                    'EXPIRY':l_expiry,
+                                                    'QUANTITY':quantity,
+                                                    'EXIT_PRICE':'NA',
+                                                    'ENTRY_PRICE':l_entry_price,
+                                                    'EXIT_PRICE':'NA',
+                                                    'ENTRY_TIME':datetime.now().strftime("%H:%Y"),
+                                                    'EXIT_TIME':'NA',
+                                                    'TOTAL_INVESTED_AMT':l_lot_size*quantity*l_entry_price,
+                                                    'STATUS':'OPEN',
+                                                    'ORDER_CATEGORY':'DELIVERY',
+                                                    'TARGET_PRICE':target_price,
+                                                    'STOP_LOSS':stop_loss,
+                                                    'INSTRUMENT_TYPE':instrument_type,
+                                                    'EXCHANGE_SEGMENT':l_exch_seg,
+                                                    'ORDER_TYPE':'SELL'
+                                                }
+                                    elif status=='CLOSED':
+                                        for mas in master_data:
+                                            
+                                        new_order={
+                                            ''
+                                        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                                                     
                                                 
 
