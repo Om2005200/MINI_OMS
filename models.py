@@ -36,6 +36,11 @@ class TOKENS(BaseModel):
     ACCESS_TOKENS:str
     REFRESH_TOKENS:str
 
+
+class DATASET(BaseModel):
+    STOCK_NAME:str
+    EXCHNAGE_SEGMENT:str
+    ISIN_VALUE:str
 # class ORDERPARAM(BaseModel):
 #     ACCESS_TOKEN:str
 #     REFRESH_TOKEN:str

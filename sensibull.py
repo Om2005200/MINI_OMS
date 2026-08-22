@@ -11,7 +11,7 @@ from typing import List,Annotated
 from sqlmodel import select,desc
 from fastapi.responses import JSONResponse
 from sqlmodel import SQLModel
-from models import ORDERPLACING,USERVERIFY,USERACCOUNT,TOKENS
+from models import ORDERPLACING,USERVERIFY,USERACCOUNT,TOKENS,DATASET
 from concurrent.futures import ProcessPoolExecutor
 from sqlmodel import SQLModel
 from sqlalchemy.ext.asyncio import create_async_engine,AsyncSession
@@ -22,10 +22,11 @@ import random
 from sqlalchemy.orm import sessionmaker
 import jwt
 from redis.asyncio import Redis 
-
+import redis
 import websockets 
-
+from redis.asyncio import Redis
 import asyncio
+import httpx
 PORT=6379
 database_url='postgresql+asyncpg://postgres:Samnokia123%40@localhost:5432/MINI_SENSIBULL'
 jwt_key='c932c7cad4cf33dd43ca01162474b4bce1ca32a76472ac7fb5de486b81f48cd1'
@@ -33,6 +34,7 @@ jwt_algorithm='HS256'
 mini_sensibull=FastAPI()
 router=APIRouter()
 engine=create_async_engine(database_url,echo=True)
+http_client = httpx.AsyncClient()
 
 
 
@@ -40,6 +42,9 @@ engine=create_async_engine(database_url,echo=True)
 @mini_sensibull.on_event('startup')
 async def startup():
     await init_db()
+    mini_sensibull.state.redis=Redis(host='localhost',port=6379)
+    mini_sensibull.http_client=httpx.AsyncClient()
+
     await s.pre_processing_the_helpers()
     while True:
         s.managing_the_orders(main_orders=USERDATABASE)
@@ -56,6 +61,7 @@ async def get_session():
 @mini_sensibull.on_event('shutdown')
 async def shutdown_evenet():
     await mini_sensibull.state.redis.close()
+    await mini_sensibull.state.http_client.aclose()
     await engine.dispose()
 
 class SENSE:
@@ -151,7 +157,7 @@ class SENSE:
                             if instrument_type=='PE':
                                 if client==client_id:
                                     if status=='OPEN':
-
+                        
                                     
                                         if old_order_type!=order_type:
 
@@ -162,69 +168,6 @@ class SENSE:
                                                     old['EXIT_TIME']=datetime.now().strftime("%H:%Y")
                                                     old['EXIT_PRICE']=exit_price
 
-                                                # elif master_quantity_!=quantity:
-                                                #     entry_price=self.getting_the_live_prices(order_symbol)
-                                                #     for new in master_data:
-                                                #         new_name=new['name']
-                                                #         strikeprice=new['strikeprice']
-                                                #         expiry=new['expiry']
-                                                #         lot_size=new['lot_size']
-                                                #         exch_seg=new['exch_seg']
-                                                #         new_order={
-                                                #             'CLIENT_ID':client_id,
-                                                #             'STOCK_NAME':new_name,
-                                                #             'TRADINGSYMBOL':order_symbol,
-                                                #             'STRIKEPRICE':strikeprice,
-                                                #             'EXPIRY':expiry,
-                                                #             'QUANTITY':quantity,
-                                                #             'EXIT_PRICE':'NA',
-                                                #             'ENTRY_PRICE':entry_price,
-                                                #             'EXIT_PRICE':'NA',
-                                                #             'ENTRY_TIME':datetime.now().strftime("%H:%Y"),
-                                                #             'EXIT_TIME':'NA',
-                                                #             'TOTAL_INVESTED_AMT':lot_size*quantity*entry_price,
-                                                #             'STATUS':'OPEN',
-                                                #             'ORDER_CATEGORY':'DELIVERY',
-                                                #             'TARGET_PRICE':target_price,
-                                                #             'STOP_LOSS':stop_loss,
-                                                #             'INSTRUMENT_TYPE':instrument_type,
-                                                #             'EXCHANGE_SEGMENT':exch_seg,
-                                                #             'ORDER_TYPE':'SELL'
-                                                #         }
-                                            # elif order_symbol!=symbols:
-                                            #     new_entry_price=self.getting_the_live_prices(order_symbol)
-                                            #     for newbies in master_data:
-                                                    
-                                                   
-                                            #         n_tradingsymbol=newbies['tradingsymbol']
-                                            #         if order_symbol==n_tradingsymbol:
-
-                                            #             n_strikeprice=newbies['strikeprice']
-                                            #             n_expiry=newbies['expiry']
-                                            #             n_name=newbies['name']
-                                            #             n_lot_size=newbies['lot_size']
-                                            #             n_exch_seg=newbies['exch_seg']
-                                            #             n_instrument_type=newbies['instrumenttype']
-                                            #             new_order={
-                                            #             'CLIENT_ID':client_id,
-                                            #             'STOCK_NAME':n_name,
-                                            #             'TRADINGSYMBOL':n_tradingsymbol,
-                                            #             'STRIKEPRICE':n_strikeprice,
-                                            #             'EXPIRY':n_expiry,
-                                            #             'QUANTITY':quantity,
-                                            #             'ENTRY_PRICE':self.getting_the_live_prices(n_tradingsymbol),
-                                            #             'EXIT_PRICE':'NA',
-                                            #             'ENTRY_TIME':datetime.now().strftime("%H:%Y"),
-                                            #             'EXIT_TIME':'NA',
-                                            #             'TOTAL_INVESTED_AMT':n_lot_size*quantity*new_entry_price,
-                                            #             'STATUS':'OPEN',
-                                            #             'ORDER_CATEGORY':'DELIVERY',
-                                            #             'TARGET_PRICE':target_price,
-                                            #             'STOP_LOSS':stop_loss,
-                                            #             'INSTRUMENT_TYPE':n_instrument_type,
-                                            #             'EXCHANGE_SEGMENT':n_exch_seg,
-                                            #             'ORDER_TYPE':'SELL'
-                                            #             }
                                         
                                     elif status=='CLOSED':
                                         for datas in master_data:
@@ -295,74 +238,6 @@ class SENSE:
                                                     old['EXIT_TIME']=datetime.now().strftime("%H:%Y")
                                                     old['EXIT_PRICE']=exit_price
 
-
-                                            
-
-                                            #     elif master_quantity_!=quantity:
-                                            #         entry_price=self.getting_the_live_prices(symbols)
-                                            #         for taat in master_data:
-                                            #             tta_tradingsymbol=taat['tradingsymbol']
-                                            #             if symbols==tta_tradingsymbol:
-                                            #                 tt_strikeprice=taat['strikeprice']
-                                            #                 tt_expiry=taat['expiry']
-                                            #                 tt_lot_size=taat['lot_size']
-                                            #                 tt_exch_seg=taat['exch_seg']
-                                            #                 tt_name=taat['name']
-                                            #                 tt_instrument_type=taat['instrumenttype']
-                                            #                 tt_entry_price=self.getting_the_live_prices(symbols)
-                                            #                 new_order={
-                                            #                     'CLIENT_ID':client_id,
-                                            #                     'STOCK_NAME':tt_name,
-                                            #                     'TRADINGSYMBOL':symbols,
-                                            #                     'STRIKEPRICE':tt_strikeprice,
-                                            #                     'EXPIRY':tt_expiry,
-                                            #                     'QUANTITY':quantity,
-                                            #                     'ENTRY_PRICE':self.getting_the_live_prices(symbols),
-                                            #                     'EXIT_PRICE':'NA',
-                                            #                     'ENTRY_TIME':datetime.now().strftime("%H:%Y"),
-                                            #                     'EXIT_TIME':'NA',
-                                            #                     'TOTAL_INVESTED_AMT':quantity*tt_lot_size*tt_entry_price,
-                                            #                     'STATUS':'OPEN',
-                                            #                     'ORDER_CATEGORY':'DELIVERY',
-                                            #                     'TARGET_PRICE':target_price,
-                                            #                     'STOP_LOSS':stop_loss,
-                                            #                     'INSTRUMENT_TYPE':tt_instrument_type,
-                                            #                     'EXCHANGE_SEGMENT':tt_exch_seg,
-                                            #                     'ORDER_TYPE':'SELL'
-                                            #                 }
-                                            # elif order_symbol!=symbols:
-                                            #     new_entry_price=self.getting_the_live_prices(order_symbol)
-                                            #     for lt in master_data:
-                                            #         lt_name=lt['name']
-                                            #         lt_tradingsymbol=lt['tradingsymbol']
-                                            #         if order_symbol==lt_tradingsymbol:
-                                            #             new_e_price=self.getting_the_live_prices(order_symbol)
-                                            #             lt_strikeprice=lt['strikeprice']
-                                            #             lt_expiry=lt['expiry']
-                                            #             lt_exch_seg=lt['exch_seg']
-                                            #             lt_lot_size=lt['lot_size']
-                                            #             lt_name=lt['name']
-                                            #             lt_instrument_type=lt['instrumenttype']
-                                            #             new_order={
-                                            #                 'CLIENT_ID':client_id,
-                                            #                 'STOCK_NAME':lt_name,
-                                            #                 'TRADINGSYMBOL':order_symbol,
-                                            #                 'STRIKEPRICE':lt_strikeprice,
-                                            #                 'EXPIRY':lt_expiry,
-                                            #                 'QUANTITY':quantity,
-                                            #                 'ENTRY_PRICE':new_e_price,
-                                            #                 'EXIT_PRICE':'NA',
-                                            #                 'ENTRY_TIME':datetime.now().strftime("%H:%Y"),
-                                            #                 'EXIT_TIME':'NA',
-                                            #                 'TOTAL_INVESTED_AMT':lt_lot_size*new_e_price*quantity,
-                                            #                 'STATUS':'OPEN',
-                                            #                 'ORDER_CATEGORY':'DELIVERY',
-                                            #                 'TARGET_PRICE':target_price,
-                                            #                 'STOP_LOSS':stop_loss,
-                                            #                 'INSTRUMENT_TYPE':lt_instrument_type,
-                                            #                 'EXCHANGE_SEGMENT':lt_exch_seg,
-                                            #                 'ORDER_TYPE':'SELL' 
-                                            #             }
                                     elif status=='CLOSED':
                                         for net in master_data:
                                             net_tradingsymbol=net['tradingsymbol']
@@ -464,9 +339,6 @@ class SENSE:
                                                     'EXCHANGE_SEGMENT':st_exch_seg,
                                                     'ORDER_TYPE':'SELL'
                                                 }
-
-
-
                                 elif client_id!=client:
                                     for wizard in master_data:
                                         wizard_tradingsymbol=wizard['tradingsymbol']
@@ -496,200 +368,381 @@ class SENSE:
                                                 'EXCHANGE_SEGMENT':wizard_exch_seg,
                                                 'ORDER_TYPE':'SELL'
                                             }
-
-
-                                            
-
-
-
-
-            
-
-
-
-
-
-
-
-
-                        
-                                                
-                                                    
-
-
-
-                                    
-                                                
-                                         
-                                    
-
-                                        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                                    
-                                                
-
-
-
-
-
-
-
-                                                
-                                                
-
-
-
-                                               
-
-
-                                        
-
-
-                            
-                                
-
-
-
-
-
-
-
-
-
-
-                                  
- 
-                                                
-                                            
-
-
-
-
-
-                                                        
-
-
-
-
-
-    
-
-
-
-
-
-
-
-                                                    
-
-
-                                                
-
-
-
-                                                                                                                
-
-
-
-
+                    if order_category == "INRTADAY":
+                        if order_type == "SELL":
+                            if instrument_type == "PE":
+                                if client == client_id:
+                                    if status == "OPEN":
+
+                                        if old_order_type != order_type:
+
+                                            if order_symbol == symbols:
+                                                if master_quantity_ == quantity:
+                                                    exit_price = self.getting_the_live_prices(
+                                                        order_symbol
+                                                    )  # SQUARE OFF ORDER USER INPUT BUY
+                                                    old["STATUS"] = "CLOSED"
+                                                    old["EXIT_TIME"] = datetime.now().strftime(
+                                                        "%H:%Y"
+                                                    )
+                                                    old["EXIT_PRICE"] = exit_price
+
+                                    elif status == "CLOSED":
+                                        for datas in master_data:
+                                            new_tradingsymbols = datas["tradingsymbol"]
+                                            if symbols == new_tradingsymbols:
+                                                new_strikeprice = datas["strikeprice"]
+                                                new_expiry = datas["expiry"]
+                                                new_exch_seg = datas["exch_seg"]
+                                                new_lot_size = datas["lot_size"]
+                                                new_instrument_type = datas["instrumenttype"]
+                                                new_entry_price_ = self.getting_the_live_prices(
+                                                    symbols
+                                                )
+                                                new_name_ = datas["name"]
+                                                new_orders = {
+                                                    "CLINET_ID": client_id,
+                                                    "STOCK_NAME": new_name_,
+                                                    "TRADINGSYMBOL": symbols,
+                                                    "STRIKEPRICE": new_strikeprice,
+                                                    "EXPIRY": new_expiry,
+                                                    "QUANTITY": quantity,
+                                                    "ENTRY_PRICE": new_entry_price_,
+                                                    "EXIT_PRICE": "NA",
+                                                    "TOTAL_INVESTED_AMT": new_entry_price_
+                                                    * new_lot_size
+                                                    * quantity,
+                                                    "STATUS": "OPEN",
+                                                    "ORDER_CATEGORY": "DELIVERY",
+                                                    "TARGET_PRICE": target_price,
+                                                    "STOP_LOSS": stop_loss,
+                                                    "INSTRUMENT_TYPE": new_instrument_type,
+                                                    "EXCHANGE_SEGMENT": new_exch_seg,
+                                                    "ORDER_TYPE": "SELL",
+                                                }
+                                elif client_id != client:
+                                    for zerod in master_data:
+                                        zerod_tradingsymbol = zerod["tradingsymbol"]
+                                        zerod_strikeprice = zerod["strikeprice"]
+                                        zerod_expiry = zerod["expiry"]
+                                        zerod_exch_seg = zerod["exch_seg"]
+                                        zerod_lot_size = zerod["lot_size"]
+                                        zerod_instrumenttype = zerod["instrumenttype"]
+                                        zerod_name = zerod["name"]
+                                        n_entry_price = self.getting_the_live_prices(
+                                            zerod_tradingsymbol
+                                        )
+                                        new_orders = {
+                                            "CLIENT_ID": client_id,
+                                            "STOCK_NAME": zerod_name,
+                                            "TRADINGSYMBOL": symbols,
+                                            "STRIKEPRICE": zerod_strikeprice,
+                                            "EXPIRY": zerod_expiry,
+                                            "QUANTITY": quantity,
+                                            "ENTRY_PRICE": n_entry_price,
+                                            "EXIT_PRICE": "NA",
+                                            "TOTAL_INVESTED_AMT": zerod_lot_size
+                                            * quantity
+                                            * n_entry_price,
+                                            "STATUS": "OPEN",
+                                            "ORDER_CATEGORY": "DELIVERY",
+                                            "TARGET_PRICE": target_price,
+                                            "STOP_LOSS": stop_loss,
+                                            "INSTRUMENT_TYPE": zerod_instrumenttype,
+                                            "EXCHANGE_SEGMENT": zerod_exch_seg,
+                                            "ORDER_TYPE": "SELL",
+                                        }
+                            elif instrument_type == "CE":
+                                if client_id == client_id:
+                                    if status == "OPEN":
+
+                                        if old_order_type == order_type:
+                                            if order_symbol == symbols:
+                                                if master_quantity_ == quantity:
+                                                    exit_price = self.getting_the_live_prices(
+                                                        order_symbol
+                                                    )
+                                                    old["STATUS"] = "CLOSED"
+                                                    old["EXIT_TIME"] = datetime.now().strftime(
+                                                        "%H:%Y"
+                                                    )
+                                                    old["EXIT_PRICE"] = exit_price
+
+                                    elif status == "CLOSED":
+                                        for net in master_data:
+                                            net_tradingsymbol = net["tradingsymbol"]
+                                            if net_tradingsymbol == symbols:
+                                                net_strikeprice = net["strikeprice"]
+                                                net_expiry = net["expiry"]
+                                                net_exch_seg = net["exch_seg"]
+                                                net_lot_size = net["lot_size"]
+                                                net_instrumenttype = net["instrumenttype"]
+                                                nety_entry_price = self.getting_the_live_prices(
+                                                    net_tradingsymbol
+                                                )
+                                                net_name = net["name"]
+                                                new_orders = {
+                                                    "CLIENT_ID": client_id,
+                                                    "STOCK_NAME": net_name,
+                                                    "TRADINGSYMBOL": net_tradingsymbol,
+                                                    "STRIKEPRICE": net_strikeprice,
+                                                    "EXPIRY": net_expiry,
+                                                    "QUANTITY": quantity,
+                                                    "ENTRY_PRICE": self.getting_the_live_prices(
+                                                        net_tradingsymbol
+                                                    ),
+                                                    "EXIT_PRICE": "NA",
+                                                    "TOTAL_INVESTED_AMT": net_lot_size
+                                                    * quantity
+                                                    * nety_entry_price,
+                                                    "STATUS": "OPEN",
+                                                    "ORDER_CATEGORY": "DELIVERY",
+                                                    "TARGET_PRICE": target_price,
+                                                    "STOP_LOSS": stop_loss,
+                                                    "INSTRUMENT_TYPE": net_instrumenttype,
+                                                    "EXCHANGE_SEGMENT": net_exch_seg,
+                                                    "ORDER_TYPE": "SELL",
+                                                }
+                                elif client_id != client:
+                                    for new_client in master_data:
+                                        new_tradingsymbol = new_client["tradingsymbol"]
+                                        if new_tradingsymbol == symbols:
+                                            new_strikeprice = new_client["strikeprice"]
+                                            new_expiry = new_client["expiry"]
+                                            new_instrumenttype = new_client["instrumenttype"]
+                                            new_lot_size = new_client["lot_size"]
+                                            new_exch_seg = new_client["exch_seg"]
+                                            new_entry_price = self.getting_the_live_prices(
+                                                new_tradingsymbol
+                                            )
+                                            new_name = new_client["name"]
+                                            new_orders = {
+                                                "CLIENT_ID": client_id,
+                                                "STOCK_NAME": new_name,
+                                                "TRADINGSYMBOL": new_tradingsymbol,
+                                                "STRIKEPRICE": new_strikeprice,
+                                                "EXPIRY": new_expiry,
+                                                "QUANTITY": quantity,
+                                                "ENTRY_PRICE": new_entry_price,
+                                                "EXIT_PRICE": "NA",
+                                                "TOTAL_INVESTED_AMT": quantity
+                                                * new_lot_size
+                                                * new_entry_price,
+                                                "STATUS": "OPEN",
+                                                "ORDER_CATEGORY": "DELIVERY",
+                                                "TARGET_PRICE": target_price,
+                                                "STOP_LOSS": stop_loss,
+                                                "INSTRUMENTTYPE": new_instrumenttype,
+                                                "EXCHANGE_SEGMENT": new_exch_seg,
+                                                "ORDER_TYPE": "SELL",
+                                            }
+                        elif order_type == "BUY":
+                            if instrument_type == "PE":
+                                if client_id == client:
+                                    if status == "OPEN":
+                                        if old_order_type != order_type:
+                                            if order_symbol == symbols:
+                                                if master_quantity_ == quantity:
+                                                    exit_price = self.getting_the_live_prices(
+                                                        order_symbol
+                                                    )
+                                                    old["STATUS"] = "CLOSED"
+                                                    old["EXIT_TIME"] = datetime.now().strftime(
+                                                        "%H:%Y"
+                                                    )
+                                                    old["EXIT_PRICE"] = exit_price
+
+                                    elif status == "CLOSED":
+                                        for sta in master_data:
+                                            st_tradingsymbol = sta["tradingsymbol"]
+                                            if st_tradingsymbol == symbols:
+                                                st_strikeprice = sta["strikeprice"]
+                                                st_expiry = sta["expiry"]
+                                                st_instrumenttype = sta["instrumenttype"]
+                                                st_exch_seg = sta["exch_seg"]
+                                                st_lot_size = sta["lot_size"]
+                                                st_name = sta["name"]
+                                                st_entry_price = self.getting_the_live_prices(
+                                                    st_tradingsymbol
+                                                )
+                                                new_orders = {
+                                                    "CLIENT_ID": client_id,
+                                                    "STOCK_NAME": st_name,
+                                                    "TRADINGSYMBOL": st_tradingsymbol,
+                                                    "STRIKEPRICE": st_strikeprice,
+                                                    "EXPIRY": st_expiry,
+                                                    "QUANTITY": quantity,
+                                                    "ENTRY_PRICE": self.getting_the_live_prices(
+                                                        st_tradingsymbol
+                                                    ),
+                                                    "EXIT_PRICE": "NA",
+                                                    "TOTAL_INVESETED_AMT": quantity
+                                                    * st_lot_size
+                                                    * st_entry_price,
+                                                    "STATUS": "OPEN",
+                                                    "ORDER_CATEGORY": "DELIVERY",
+                                                    "TARGET_PRICE": target_price,
+                                                    "STOP_LOSS": stop_loss,
+                                                    "INSTRUMENT_TYPE": st_instrumenttype,
+                                                    "EXCHANGE_SEGMENT": st_exch_seg,
+                                                    "ORDER_TYPE": "SELL",
+                                                }
+                                elif client_id != client:
+                                    for wizard in master_data:
+                                        wizard_tradingsymbol = wizard["tradingsymbol"]
+                                        if wizard_tradingsymbol == symbols:
+                                            wizard_strikeprice = wizard["strikeprice"]
+                                            wizard_expiry = wizard["expiry"]
+                                            wizard_instrumenttype = wizard["instrumenttype"]
+                                            wizard_lot_size = wizard["lot_size"]
+                                            wizard_exch_seg = wizard["exch_seg"]
+                                            wizard_name = wizard["name"]
+                                            wizard_entry_price = self.getting_the_live_prices(
+                                                wizard_tradingsymbol
+                                            )
+                                            new_order = {
+                                                "CLIENT_ID": client_id,
+                                                "STOCK_NAME": wizard_name,
+                                                "TRADINGSYMBOL": wizard_tradingsymbol,
+                                                "STRIKEPRICE": wizard_strikeprice,
+                                                "EXPIRY": wizard_expiry,
+                                                "QUANTITY": quantity,
+                                                "ENTRY_PRICE": wizard_entry_price,
+                                                "EXIT_PRICE": "NA",
+                                                "TOTAL_INVESTED_AMT": wizard_lot_size
+                                                * wizard_entry_price
+                                                * quantity,
+                                                "STATUS": "OPEN",
+                                                "ORDER_CATEGORY": "DELIVERY",
+                                                "TARGET_PRICE": target_price,
+                                                "STOP_LOSS": stop_loss,
+                                                "INSTRUMENT_TYPE": wizard_instrumenttype,
+                                                "EXCHANGE_SEGMENT": wizard_exch_seg,
+                                                "ORDER_TYPE": "SELL",
+                                            }
+                            elif instrument_type == "CE":
+                                if client_id == client_id:
+                                    if status == "OPEN":
+
+                                        if old_order_type == order_type:
+                                            if order_symbol == symbols:
+                                                if master_quantity_ == quantity:
+                                                    exit_price = self.getting_the_live_prices(
+                                                        order_symbol
+                                                    )
+                                                    old["STATUS"] = "CLOSED"
+                                                    old["EXIT_TIME"] = datetime.now().strftime(
+                                                        "%H:%Y"
+                                                    )
+                                                    old["EXIT_PRICE"] = exit_price
+
+                                    elif status == "CLOSED":
+                                        for net in master_data:
+                                            net_tradingsymbol = net["tradingsymbol"]
+
+                                            if net_tradingsymbol == symbols:
+                                                net_strikeprice = net["strikeprice"]
+                                                net_expiry = net["expiry"]
+                                                net_exch_seg = net["exch_seg"]
+                                                net_lot_size = net["lot_size"]
+                                                net_instrumenttype = net["instrumenttype"]
+
+                                                nety_entry_price = self.getting_the_live_prices(
+                                                    net_tradingsymbol
+                                                )
+
+                                                net_name = net["name"]
+
+                                                new_orders = {
+                                                    "CLIENT_ID": client_id,
+                                                    "STOCK_NAME": net_name,
+                                                    "TRADINGSYMBOL": net_tradingsymbol,
+                                                    "STRIKEPRICE": net_strikeprice,
+                                                    "EXPIRY": net_expiry,
+                                                    "QUANTITY": quantity,
+                                                    "ENTRY_PRICE": self.getting_the_live_prices(
+                                                        net_tradingsymbol
+                                                    ),
+                                                    "EXIT_PRICE": "NA",
+                                                    "TOTAL_INVESTED_AMT": (
+                                                        net_lot_size
+                                                        * quantity
+                                                        * nety_entry_price
+                                                    ),
+                                                    "STATUS": "OPEN",
+                                                    "ORDER_CATEGORY": "DELIVERY",
+                                                    "TARGET_PRICE": target_price,
+                                                    "STOP_LOSS": stop_loss,
+                                                    "INSTRUMENT_TYPE": net_instrumenttype,
+                                                    "EXCHANGE_SEGMENT": net_exch_seg,
+                                                    "ORDER_TYPE": "SELL",
+                                                }
+
+                                elif client_id != client:
+                                    for new_client in master_data:
+                                        new_tradingsymbol = new_client["tradingsymbol"]
+
+                                        if new_tradingsymbol == symbols:
+                                            new_strikeprice = new_client["strikeprice"]
+                                            new_expiry = new_client["expiry"]
+                                            new_instrumenttype = new_client["instrumenttype"]
+                                            new_lot_size = new_client["lot_size"]
+                                            new_exch_seg = new_client["exch_seg"]
+
+                                            new_entry_price = self.getting_the_live_prices(
+                                                new_tradingsymbol
+                                            )
+
+                                            new_name = new_client["name"]
+
+                                            new_orders = {
+                                                "CLIENT_ID": client_id,
+                                                "STOCK_NAME": new_name,
+                                                "TRADINGSYMBOL": new_tradingsymbol,
+                                                "STRIKEPRICE": new_strikeprice,
+                                                "EXPIRY": new_expiry,
+                                                "QUANTITY": quantity,
+                                                "ENTRY_PRICE": new_entry_price,
+                                                "EXIT_PRICE": "NA",
+                                                "TOTAL_INVESTED_AMT": (
+                                                    quantity
+                                                    * new_lot_size
+                                                    * new_entry_price
+                                                ),
+                                                "STATUS": "OPEN",
+                                                "ORDER_CATEGORY": "DELIVERY",
+                                                "TARGET_PRICE": target_price,
+                                                "STOP_LOSS": stop_loss,
+                                                "INSTRUMENTTYPE": new_instrumenttype,
+                                                "EXCHANGE_SEGMENT": new_exch_seg,
+                                                "ORDER_TYPE": "SELL",
+                                            }
+
+
+
+
+    async def getting_the_required_day_data(exchange_segment:str,isin_value:str,stock_name:str):
         
-            
-
-
-
-
-    
-
-
-
-
-
-
-
-    async def managing_the_orders(self,session:AsyncSession):
-        main_orders=select(ORDER_DATABASE)
-        execution=await session.execute(main_orders)
-        response=execution.scalars().all()
-        master_data=self.processing_the_files()
-        current_date=datetime.now().strftime("%H:%Y")
-        current_time=datetime.now()
-        org_orders=response
-        for orders in org_orders:
-            client_id=orders.CLIENT_ID
-            strikeprice=orders.STRIKEPRICE
-            tradingsymbol=orders.TRADINGSYMBOL
-            quantity=orders.QUANTITY
-            entry_price=orders.ENTRY_PRICE
-            order_category=orders.ORDER_CATEGORY
-            stop_loss=orders.STOP_LOSS
-            target_price=orders.TARGET_PRICE
-            order_type=orders.ORDER_TYPE
-            instrument_type=orders.INSTRUMENT_TYPE
-
-
-
-
-            
-
-
-
-
-
-
-
-                                        
-                                                    
-
-
-
-
-
-
-
-
-
+        api='https://api.upstox.com/v3/market-quote/ohlc'
+        headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': ''
+        }
+        data={
+            'instrument_key':exchange_segment|isin_value
+        }
+        response= await http_client.get(url=api,headers=headers)
+        print(response.status_code)
+        main_data=response.json()
+        redis_load=await mini_sensibull.redis.set(stock_name,main_data,ex=3600)
+        return redis_load
 
     
 
 
-
-
-
-                    
-
-
-
-
-                    
-
-
-
-
+    
         
-
-
 
 s=SENSE()
 
@@ -790,6 +843,22 @@ async def creating_the_access_tokens(user_model:USERACCOUNT,session:AsyncSession
         })
 
 
+@router.get('/stock/day/data/')
+async def getting_the_daily_data(user_model:DATASET):
+    
+    required_data=await s.getting_the_required_day_data(user_model)
+    if required_data is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail='NO DATA AVAILAIBLE FOR THE GIVEN ISIN')
+    return JSONResponse({
+        'STATUS':'DATA FETCHED SUCCESFULLY',
+        'DATA':required_data
+    })
+
+
+
+    
+
+    
 
 
 
