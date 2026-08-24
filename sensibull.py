@@ -717,9 +717,136 @@ class SENSE:
                                                 "EXCHANGE_SEGMENT": new_exch_seg,
                                                 "ORDER_TYPE": "SELL",
                                             }
+        session.add(new_orders)
+        await session.commit()
+        await session.refresh(new_orders)
 
 
 
+
+
+    def processing_the_orders(self):
+        main_orders=ORDER_DATABASE
+        current_date_time=datetime.now().strftime("%H:%Y")
+        current_date=''
+        client_id=main_orders.CLIENT_ID
+        order_category=main_orders.ORDER_CATEGORY
+        order_type=main_orders.ORDER_TYPE
+        stop_loss=main_orders.STOP_LOSS
+        expiry=main_orders.EXPIRY
+        target_price=main_orders.TARGET_PRICE
+        tradingsymbol=main_orders.TRADINGSYMBOL
+        if status=='OPEN':
+
+            if order_category=='DELIVERY':
+                if order_type=='SELL':
+
+                    if stop_loss is not  None:
+                        if target_price is not None:
+                            if expiry is not None:
+                                if expiry!=current_date:
+                                    if current_date_time<'15:30':
+
+                                        exit_price=self.getting_the_live_prices(tradingsymbol)
+                                        if target_price<=exit_price:
+
+                                            main_orders['STATUS']='CLOSED'
+                                            main_orders['EXIT_PRICE']=exit_price
+
+                                            main_orders['EXIT_TIME']=datetime.now().strftime("%H:%Y")
+                                        elif exit_price>=stop_loss:
+                                            main_orders['STATUS']='CLOSED'
+                                            main_orders['EXIT_PRICE']=exit_price
+                                            main_orders['EXIT_TIME']=datetime.now().strftime("%H:%Y")
+
+                                elif expiry==current_date:
+                                    if current_date_time<'15:30':
+                                        exit_price=self.getting_the_live_prices(tradingsymbol)
+                                        if exit_price<=target_price:
+                                            main_orders['STATUS']="CLOSED"
+                                            main_orders['EXIT_PRICE']=exit_price
+                                            main_orders['EXIT_TIME']=datetime.now().strftime("%H:%Y")
+                                        elif exit_price>= stop_loss:
+                                            main_orders['STATUS']='CLOSED'
+                                            main_orders['EXIT_PRICE']=exit_price
+                                            main_orders['EXIT_TIME']=datetime.now().strftime("%H:%Y")
+
+                                    elif current_date_time>='15:30':
+                                        main_orders['STATUS']='CLOSED'
+                                        main_orders['EXIT_PRICE']=exit_price
+                                        main_orders['EXIT_TIME']=datetime.now().strftime("%H:%Y")
+                    elif stop_loss is None:
+                        if target_price is not None:
+                            if expiry is not None:
+                                exit_price=self.getting_the_live_prices(tradingsymbol)
+                                if current_date!=expiry:
+                                    if current_date_time<'15:30':
+
+                                        if exit_price<=target_price:
+                                            main_orders['STATUS']='CLOSED'
+                                            main_orders['EXIT_PRICE']=exit_price
+
+                                            main_orders['EXIT_TIME']=datetime.now().strftime("%H:%Y")
+                                        elif exit_price>=stop_loss:
+                                            main_orders['STATUS']='CLOSED'
+                                            main_orders['EXIT_PRICE']=exit_price
+                                            main_orders['EXIT_TIME']=datetime.now().strftime("%H:%Y")
+                                elif current_date==expiry:
+                                    if current_date_time<'15:30':
+                                        if exit_price<=target_price:
+
+                                            main_orders['EXIT_PRICE']=exit_price
+
+                                            main_orders['STATUS']='CLOSED'
+                                            main_orders['EXIT_TIME']=datetime.now().strftime("%H:%Y")
+                                        elif exit_price>=stop_loss:
+                                            main_orders['EXIT_PRICE']=exit_price
+                                            main_orders['EXIT_TIME']=datetime.now().strftime('%H:%Y')
+                                            main_orders['STATUS']='CLOSED'
+
+
+
+
+
+                                    elif current_date_time>='15:30':
+                                        main_orders['STATUS']='CLOSED'
+                                        main_orders['EXIT_PRICE']=exit_price
+
+                                        main_orders['EXIT_TIME']=datetime.now().strftime('%H:%Y')
+
+                    elif stop_loss is None:
+                        if target_price is None:
+                            exit_price=self.getting_the_live_prices(tradingsymbol) 
+                            if current_date==expiry:
+                                if current_date_time>='15:30':
+                                    main_orders['STATUS']='CLOSED'
+                                    main_orders['EXIT_TIME']=datetime.now().strftime("%H:%Y")
+                                    main_orders['EXIT_PRICE']=exit_price
+
+
+                                    
+
+                                        
+
+                                                
+
+
+            
+
+
+
+
+
+
+                
+
+
+
+
+
+
+
+    
 
     async def getting_the_required_day_data(exchange_segment:str,isin_value:str,stock_name:str):
         
@@ -732,7 +859,7 @@ class SENSE:
         data={
             'instrument_key':exchange_segment|isin_value
         }
-        response= await http_client.get(url=api,headers=headers)
+        response= await http_client.get(url=api,headers=headers,params=data)
         print(response.status_code)
         main_data=response.json()
         redis_load=await mini_sensibull.redis.set(stock_name,main_data,ex=3600)
