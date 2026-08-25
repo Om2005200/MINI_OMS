@@ -822,9 +822,122 @@ class SENSE:
                                     main_orders['STATUS']='CLOSED'
                                     main_orders['EXIT_TIME']=datetime.now().strftime("%H:%Y")
                                     main_orders['EXIT_PRICE']=exit_price
+                elif order_type == 'BUY':
 
+                    if stop_loss is not None:
+
+                        if target_price is not None:
+
+                            if expiry is not None:
+
+                                if expiry != current_date:
+
+                                    if current_date_time < '15:30':
+
+                                        exit_price = self.getting_the_live_prices(tradingsymbol)
+
+                                        if target_price <= exit_price:
+
+                                            main_orders['STATUS'] = 'CLOSED'
+                                            main_orders['EXIT_PRICE'] = exit_price
+                                            main_orders['EXIT_TIME'] = datetime.now().strftime("%H:%Y")
+
+                                        elif exit_price >= stop_loss:
+
+                                            main_orders['STATUS'] = 'CLOSED'
+                                            main_orders['EXIT_PRICE'] = exit_price
+                                            main_orders['EXIT_TIME'] = datetime.now().strftime("%H:%Y")
+
+                                elif expiry == current_date:
+
+                                    if current_date_time < '15:30':
+
+                                        exit_price = self.getting_the_live_prices(tradingsymbol)
+
+                                        if exit_price <= target_price:
+
+                                            main_orders['STATUS'] = "CLOSED"
+                                            main_orders['EXIT_PRICE'] = exit_price
+                                            main_orders['EXIT_TIME'] = datetime.now().strftime("%H:%Y")
+
+                                        elif exit_price >= stop_loss:
+
+                                            main_orders['STATUS'] = 'CLOSED'
+                                            main_orders['EXIT_PRICE'] = exit_price
+                                            main_orders['EXIT_TIME'] = datetime.now().strftime("%H:%Y")
+
+                                    elif current_date_time >= '15:30':
+
+                                        main_orders['STATUS'] = 'CLOSED'
+                                        main_orders['EXIT_PRICE'] = exit_price
+                                        main_orders['EXIT_TIME'] = datetime.now().strftime("%H:%Y")
+
+                    elif stop_loss is None:
+
+                        if target_price is not None:
+
+                            if expiry is not None:
+
+                                exit_price = self.getting_the_live_prices(tradingsymbol)
+
+                                if current_date != expiry:
+
+                                    if current_date_time < '15:30':
+
+                                        if exit_price <= target_price:
+
+                                            main_orders['STATUS'] = 'CLOSED'
+                                            main_orders['EXIT_PRICE'] = exit_price
+                                            main_orders['EXIT_TIME'] = datetime.now().strftime("%H:%Y")
+
+                                        elif exit_price >= stop_loss:
+
+                                            main_orders['STATUS'] = 'CLOSED'
+                                            main_orders['EXIT_PRICE'] = exit_price
+                                            main_orders['EXIT_TIME'] = datetime.now().strftime("%H:%Y")
+
+                                elif current_date == expiry:
+
+                                    if current_date_time < '15:30':
+
+                                        if exit_price <= target_price:
+
+                                            main_orders['EXIT_PRICE'] = exit_price
+                                            main_orders['STATUS'] = 'CLOSED'
+                                            main_orders['EXIT_TIME'] = datetime.now().strftime("%H:%Y")
+
+                                        elif exit_price >= stop_loss:
+
+                                            main_orders['EXIT_PRICE'] = exit_price
+                                            main_orders['EXIT_TIME'] = datetime.now().strftime('%H:%Y')
+                                            main_orders['STATUS'] = 'CLOSED'
+
+                                    elif current_date_time >= '15:30':
+
+                                        main_orders['STATUS'] = 'CLOSED'
+                                        main_orders['EXIT_PRICE'] = exit_price
+                                        main_orders['EXIT_TIME'] = datetime.now().strftime('%H:%Y')
+
+                    elif stop_loss is None:
+
+                        if target_price is None:
+                            if expiry is not None:
+
+
+                                exit_price = self.getting_the_live_prices(tradingsymbol)
+
+                                if current_date == expiry:
+
+                                    if current_date_time >= '15:30':
+
+                                        main_orders['STATUS'] = 'CLOSED'
+                                        main_orders['EXIT_TIME'] = datetime.now().strftime("%H:%Y")
+                                        main_orders['EXIT_PRICE'] = exit_price
 
                                     
+                
+
+
 
                                         
 
