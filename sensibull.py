@@ -32,6 +32,11 @@ database_url='postgresql+asyncpg://postgres:Samnokia123%40@localhost:5432/MINI_S
 jwt_key='c932c7cad4cf33dd43ca01162474b4bce1ca32a76472ac7fb5de486b81f48cd1'
 jwt_algorithm='HS256'
 mini_sensibull=FastAPI()
+@mini_sensibull.get("/")
+async def home():
+    return {
+        "message": "MINI SENSIBULL API IS RUNNING"
+    }
 router=APIRouter()
 engine=create_async_engine(database_url,echo=True)
 http_client = httpx.AsyncClient()
@@ -43,11 +48,11 @@ http_client = httpx.AsyncClient()
 async def startup():
     await init_db()
     mini_sensibull.state.redis=Redis(host='localhost',port=6379)
-    mini_sensibull.http_client=httpx.AsyncClient()
+    mini_sensibull.state.http_client=httpx.AsyncClient()
 
     await s.pre_processing_the_helpers()
-    while True:
-        s.managing_the_orders(main_orders=USERDATABASE)
+    # while True:
+    #     s.processing_the_orders()
     
 
 async def init_db():
@@ -63,6 +68,8 @@ async def shutdown_evenet():
     await mini_sensibull.state.redis.close()
     await mini_sensibull.state.http_client.aclose()
     await engine.dispose()
+
+
 
 class SENSE:
     """THIS APPLICATION IS SOLELY DEVELOPED  AS A REPLICA OF SENSIBULL"""
@@ -84,6 +91,13 @@ class SENSE:
         with open(r"C:\Users\dasho\angelone_srip_master_for_mini_sensibull.json",'w') as x:
             json.dump(main_data,x,indent=4)
         return main_data
+
+
+
+
+
+
+    
         
     def getting_the_live_prices(self,trade_symbol:str):
         pass
@@ -918,6 +932,7 @@ class SENSE:
                                         main_orders['EXIT_PRICE'] = exit_price
                                         main_orders['EXIT_TIME'] = datetime.now().strftime('%H:%Y')
 
+
                     elif stop_loss is None:
 
                         if target_price is None:
@@ -934,6 +949,25 @@ class SENSE:
                                         main_orders['EXIT_TIME'] = datetime.now().strftime("%H:%Y")
                                         main_orders['EXIT_PRICE'] = exit_price
 
+                        
+    def ip_file(self):
+        try:
+            with open(r'C:\Users\dasho\ip_files','r') as x:
+                data=json.load(x)
+                if data is None:
+                    data=[]
+                return data
+
+
+        except FileNotFoundError:
+            with open(r'C:\Users\dasho\ip_files','w') as k:
+                json.dump([],k,indent=4)
+
+
+            return []
+
+
+        
                                     
                 
 
@@ -952,6 +986,11 @@ class SENSE:
 
 
                 
+
+
+
+
+
 
 
 
@@ -1042,6 +1081,61 @@ class HELPERS:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE ENTER VALID DETAILS TO ACCESS THE DATAS')
 
 
+
+
+    async def getting_the_ip(self,request:Request):
+        ip=request.client.host
+        return ip
+
+
+
+    async def sliding_window(self,request:Request):
+        main_data=s.ip_file()
+
+        time_limit=60
+        requests_limit=100
+        client_ip_adress=self.getting_the_ip(request)
+        current_time=datetime.now()
+        if client_ip_adress not in main_data:
+            main_data.append(client_ip_adress)
+            with open(r'C:\Users\dasho\ip_files','w') as l:
+
+                json.dump(main_data,l,indent=4)
+                current_window_1=current_time-30
+                current_window_2=
+
+        
+
+
+
+
+            
+
+
+
+
+        
+
+
+
+
+
+
+
+                    
+
+
+                    
+                        
+
+
+
+
+
+
+    
+
+
         
 
 
@@ -1093,6 +1187,9 @@ async def getting_the_daily_data(user_model:DATASET):
         'STATUS':'DATA FETCHED SUCCESFULLY',
         'DATA':required_data
     })
+
+
+
 
 
 
@@ -1153,7 +1250,7 @@ mini_sensibull.include_router(router)
 
 
 
-
+T
 
 
 
