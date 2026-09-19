@@ -41,6 +41,8 @@ router=APIRouter()
 engine=create_async_engine(database_url,echo=True)
 http_client = httpx.AsyncClient()
 
+pwd_context=CryptContext(schemes=['bcrypt'],depriciated='auto')
+oauth_2=OAuth2PasswordBearer(token_url='/login')
 
 
 
@@ -1026,85 +1028,50 @@ class SENSE:
 s=SENSE()
 
 class HELPERS:
-    async def verify_the_user(self,user_model:USERACCOUNT,session:AsyncSession):
-        user_creation=select(USERDATABASE).where(USERDATABASE.CONTACT_NO==user_model.CONTACT_NO,USERDATABASE.EMAIL_ID==user_model.EMAIL_ID)
-        execution=await session.execute(user_creation)
+    async def creating_the_new_user(self,db_model:USERACCOUNT,session:AsyncSession):
+        create_user=USERDATABASE(NAME=db_model.NAME,PASSWORD=pwd_context.hash(db_model.PASSWORD))
+        session.add(create_user)
+        await session.commit()
+        await session.refresh(create_user)
+
+
+
+    async def verify_the_user(self,user_input:USERACCOUNT,session:AsyncSession):
+        validate_user=select(USERDATABASE).where(USERDATABASE.NAME==user_input.NAME)
+        execution=await session.execute(validate_user)
         response=execution.first()
-        if response is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE CREATE AN ACCOUNT TO ACCESS')
+        if response is  not None:
 
-
-    async def creating_the_access_tokens(self,user_model:USERACCOUNT):
-        encode={'sub':user_model.CLIENT_ID,'email_id':user_model.EMAIL_ID}
-        expires=datetime.utcnow()+timedelta(hours=2)
-        encode.update({'exp':expires})
-        return jwt.encode(encode,jwt_key,algorithm=jwt_algorithm)
-
-
-
-    async def creating_the_refresh_tokens(self,user_model:USERACCOUNT):
-        encode={'sub':user_model.EMAIL_ID,'id':user_model.NAME}
-        expires=datetime.utcnow()+timedelta(days=1)
-        encode.update({'exp':expires})
-        return jwt.encode(encode,jwt_key,algorithm=jwt_algorithm)
-
-
-    async def user_exists(self,user_model:USERACCOUNT,session:AsyncSession):
-        check_user=select(USERDATABASE).where(USERDATABASE.EMAIL_ID==user_model.EMAIL_ID,USERDATABASE.PASSWORD==user_model.PASSWORD)
-        execution=await session.execute(check_user)
-        response=execution.first()
-        return response
-
-
-    async def decoding_the_access_tokens(self,user_model:TOKENS,session:AsyncSession):
-        payload=jwt.decode(jwt_key,algorithms=[jwt_algorithm])
-        client_id=payload.get('sub')
-        email_id=payload.get('id')
-        main_checker=select(USERDATABASE).where(USERDATABASE.CLIENT_ID==client_id,USERDATABASE.EMAIL_ID==email_id)
-        execution=await session.execute(main_checker)
-        response=execution.first()
-        
-        if response is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE ENTER VALID TOKENS TO ACCESS THE DATAS')
-
-        
-
-    async def decoding_the_refresh_tokens(self,user_input:TOKENS,session:AsyncSession):
-        payload=jwt.decode(jwt_key,algorithms=[jwt_algorithm])
-        email_id=payload.get('sub')
-        name=payload.get('id')
-        media_checker=select(USERDATABASE).where(USERDATABASE.EMAIL_ID==email_id,USERDATABASE.NAME==name)
-        execution=await session.execute(media_checker)
-        response=execution.first()
-
-        if response is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE ENTER VALID DETAILS TO ACCESS THE DATAS')
+            password_get=pwd_context.verify(user_input.PASSWORD,response['PASSWORD'])
+            if password_get is True:
 
 
 
 
-    async def getting_the_ip(self,request:Request):
-        ip=request.client.host
-        return ip
+              
+
+                return True
 
 
 
-    async def sliding_window(self,request:Request):
-        main_data=s.ip_file()
 
-        time_limit=60
-        requests_limit=100
-        client_ip_adress=self.getting_the_ip(request)
-        current_time=datetime.now()
-        if client_ip_adress not in main_data:
-            main_data.append(client_ip_adress)
-            with open(r'C:\Users\dasho\ip_files','w') as l:
+    async def getting_the_access_tokens(self,form_data:OAuth2PasswordRequestForm,session:AsyncSession):
+        user_data=await self.verify_the_user(form_data,session)
+        if user_data is not None:
+            encode={'sub':form_data.username}
+            expires=datetime.utcnow()+timedelta(hours=24)
+            encode.update({'exp':expires})
+            return jwt.encode(encode,jwt_key,algorithm=jwt_algorithm)
 
-                json.dump(main_data,l,indent=4)
-                current_window_1=current_time-30
-                current_window_2=
+
+
+    
+
+            
+            
 
         
+
 
 
 
@@ -1114,23 +1081,34 @@ class HELPERS:
 
 
 
+
+    async def decoding_the_access_tokens(self,user_model:TOKENS,session:AsyncSession):
+        payload=jwt.decode(jwt_key,algorithms=[jwt_algorithm])
+        client_id=payload.get('sub')
+        #contact_no=payload.get('id')
+        main_checker=select(USERDATABASE).where(USERDATABASE.NAME==client_id)
+        execution=await session.execute(main_checker)
+        response=execution.first()
+        
+        if response is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE ENTER VALID TOKENS TO ACCESS THE DATAS')
+
         
 
 
 
+    async def getting_the_ip(self,request:Request):
+        ip=request.client.host
+        return ip
 
+    async def user_exists(self,user_model:USERACCOUNT,session:AsyncSession):
+        check_user=select(USERDATABASE).where(USERDATABASE.NAME==user_model.NAME,USERDATABASE.CONTACT_NO==user_model.CONTACT_NO)
+        execution=await session.execute(check_user)
+        response=execution.first()
+        if response is not None:
+            return True
 
-
-
-                    
-
-
-                    
-                        
-
-
-
-
+        
 
 
     
@@ -1145,76 +1123,50 @@ h=HELPERS()
 @router.post('/create/account/')
 async def create_account(user_model:USERACCOUNT,session:AsyncSession=Depends(get_session)):
     user_exists=await h.user_exists(user_model,session)
-    if user_exists is not  None:
+
+    if user_exists is True:
         return JSONResponse(content={
             'message':'USER EXISTS PLEASE LOGIN'
         })
     else:
-        new_user=USERDATABASE(CLIENT_ID=user_model.CLIENT_ID,NAME=user_model.NAME,EMAIL_ID=user_model.EMAIL_ID,PASSWORD=user_model.PASSWORD,CONTACT_NO=user_model.CONTACT_NO)
-        access_tokens=await h.creating_the_access_tokens(user_model)
-        refresh_tokens= await h.creating_the_refresh_tokens(user_model)
+        new_user=await h.creating_the_new_user(user_model,session)
+        if new_user is not None:
 
-        session.add(new_user)
-        await session.commit()
-        await session.refresh(new_user)
-        return JSONResponse({
-            'STATUS':'ACCOUNT CREATED SUCCESFULLY',
-            'REFRESH_TOKENS':refresh_tokens,
-            'ACCESS_TOKENS':access_tokens
-        })
+            return JSONResponse({
+                'STATUS':'ACCOUNT CREATED SUCCESFULLY'
+                
+            })
 
 
-@router.get('/create/access_tokens/')
-async def creating_the_access_tokens(user_model:USERACCOUNT,session:AsyncSession=Depends(get_session)):
-    user_verify=await h.user_exists(user_model,session)
+@router.get('/user/login/')
+
+async def user_login(user_model:USERACCOUNT,session:AsyncSession=Depends(get_session)):
+    user_verify=await h.verify_the_user(user_model,session)
     if user_verify is not None:
-        access_tokens=await h.creating_the_access_tokens(user_model)
-        if access_tokens is None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail='UNABLE TO CREATE THE ACCESS TOKENS DUE TO HEAVY TRAFFIC PLESE RETRY AFTER SOMETIMES ')
-        return JSONResponse({
-            'STATUS':"ACCESS_TOKENS_CREATED",
-            'ACCESS_TOKENS':access_tokens
-        })
+        create_access_tokens=await h.getting_the_access_tokens(user_model,session)
+        if create_access_tokens is not None:
+            return JSONResponse({
+                'STATUS':'SUCCESSFULL',
+                'ACCESS_TOKENS':create_access_tokens
+            })
 
+
+
+   
 
 @router.get('/stock/day/data/')
-async def getting_the_daily_data(user_model:DATASET):
-    
-    required_data=await s.getting_the_required_day_data(user_model)
-    if required_data is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail='NO DATA AVAILAIBLE FOR THE GIVEN ISIN')
-    return JSONResponse({
-        'STATUS':'DATA FETCHED SUCCESFULLY',
-        'DATA':required_data
-    })
-
-
-
-
-
+async def getting_the_daily_data(user_model:DATASET,session:AsyncSession=Depends(get_session)):
+    token_verify=await h.decoding_the_access_tokens(user_model,session)
+    if token_verify is not None:
 
     
-
-    
-
-
-
-    
-
-
-
-    
-
-
-
-
-
-    
-
-
-
-
-
+        required_data=await s.getting_the_required_day_data(user_model)
+        if required_data is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail='NO DATA AVAILAIBLE FOR THE GIVEN ISIN')
+        return JSONResponse({
+            'STATUS':'DATA FETCHED SUCCESFULLY',
+            'DATA':required_data
+        })
 
 
 @router.post('/order/placing/')
@@ -1250,7 +1202,7 @@ mini_sensibull.include_router(router)
 
 
 
-T
+
 
 
 

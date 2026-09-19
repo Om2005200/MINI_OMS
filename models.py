@@ -41,6 +41,7 @@ class DATASET(BaseModel):
     STOCK_NAME:str
     EXCHNAGE_SEGMENT:str
     ISIN_VALUE:str
+    ACCESS_TOKENS:str
 # class ORDERPARAM(BaseModel):
 #     ACCESS_TOKEN:str
 #     REFRESH_TOKEN:str
