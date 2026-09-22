@@ -195,8 +195,23 @@ class SENSE:
                 elif order_type=='BUY':
                     for latest in master_data:
                         new_symbols=latest['tradingsymbol']
-                        if new_symbol==symbol:
+                        if new_symbols==symbol:
                             new_order=json.dumps(datas)
+
+
+        session.add(new_order)
+
+        await session.commit()
+        await session.refresh(new_order)
+
+
+    
+
+
+    
+
+
+
 
 
 
