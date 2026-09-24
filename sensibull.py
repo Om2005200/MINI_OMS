@@ -101,6 +101,13 @@ class SENSE:
 
 
 
+    def reading_the_master_data(self):
+        with open(r"C:\Users\dasho\angelone_srip_master_for_mini_sensibull.json",'r') as jh:
+            data=json.load(jh)
+
+
+            return data
+
 
     
         
@@ -136,8 +143,7 @@ class SENSE:
         master_data=self.reading_the_master_file()
 
 
-        for old_data in response:
-            client_sets=old_data['CLIENT_ID']
+            
 
         for basket in master_orders:
             client_id=basket['CLIENT_ID']
@@ -158,51 +164,288 @@ class SENSE:
 
             if order_category=='DELIVERY':
                 if order_type=='SELL':
-                    for datas in master_data:
-                        name=datas['name']
-                        tradingsymbol=datas['tradingsymbol']
-                        if symbol==tradingsymbol:
 
-                            new_order=json.dumps(datas)
+                    for old_set in response:
+                        old_client=old_set.CLIENT_ID
+                        if old_client==client_id:
+                            old_order_status=old_set.STATUS
+                            if old_order_status=='OPEN':
+                                old_symbol=old_set.TRADINGSYMBOL
+                                if old_symbol==symbol:
+                                    old_order_type=old_set.ORDER_TYPE
+                                    if old_order_type=='BUY':
+                                        old_order_quantity=old_set.QUANTITY
+                                        if old_order_quantity==quantity:
+                                            current_ltp=self.getting_the_live_prices(symbol)
+
+                                            new_order_copy={
+                                                'SYMBOL':symbol,
+                                                'ENTRY_PRICE':entry_price,
+                                                'EXIT_PRICE':exit_price,
+                                                'EXIT_TIME':datetime.now()
+                                            }
 
 
 
 
-                        else:
-                            return 
+                                            old_set['STATUS']='CLOSED'
+                                            old_set['EXIT_TIME']=datetime.now()
+                                            old_set['EXIT_PRICE']=current_ltp
+                                            
+                                            session.add(old_set)
+
+                                            await session.commit()
+                                            await session.refresh(old_set)
+
+
+
+                                            return new_order_copy
+                            if old_order_status=='CLOSED':
+
+                                for master_load in master_data:
+                                    master_symbol=master_load['tradingssymbol']
+                                    if master_symbol==symbol:
+                                        new_order=json.dumps(master_load)
+                                        new_order_copy=master_load
+
+                                        
+                                        session.add(new_order)
+
+                                        await session.commit()
+                                        await session.refresh(new_order)
+
+
+
+                                        return new_order_copy
+
+
+
+
+
+
+                               
+
+                        
+                                        
+
+
+
+
+
+                                            
+
+
+
+
+                                 
 
                         
 
 
-                elif order_type=='BUY':
-                    for gen_data in master_data:
-                        gen_symbol=gen_data['tradingsymbol']
-                        if gen_symbol==symbol:
-                            new_order=json.dumps(datas)
+
+
+
+    async def processing_the_orders(self,session:AsyncSession):
+        master_data=self.reading_the_master_data()
+        
 
 
 
 
-            elif order_category=='FNO':
-                if order_type=='SELL':
-                    for new in master_data:
-                        new_symbol=new['tradingsymbol']
-                        if new_symbol==symbol:
-                            new_order=json.dumps(datas)
+
+        old_data=select(ORDER_DATABASE)
+        data_accept=await session.execute(old_data)
+        data_load=data_accept.scalars().all()
+        current_date=datetime.now().strftime("%Y-%m-%d")
+        current_time=datetime.now()
+
+        for datas in data_load:
+            tradingsymbol=datas.TRADINGSYMBOL
+            strikeprice=datas.STRIKEPRICE
+            entry_price=datas.ENTRY_PRICE
+            exit_price=datas.EXIT_PRICE
+            quantity=datas.QUANTITY
+            status=datas.STATUS
+            order_type=datas.ORDER_TYPE
+            stop_loss=datas.STOP_LOSS
+            target_price=datas.TARGET_PRICE
+            expiry=datas.EXPIRY
 
 
 
-                elif order_type=='BUY':
-                    for latest in master_data:
-                        new_symbols=latest['tradingsymbol']
-                        if new_symbols==symbol:
-                            new_order=json.dumps(datas)
+
+            order_category=datas.ORDER_CATEGORY
+            if order_category=='DELIVERY':
+                if status=='OPEN':
+                    if order_type=='SELL':
+
+                        if stop_loss is not None:
+                            if target_price is not None:
+                                if expiry is not None:
+                                    current_ltp=self.getting_the_live_prices(tradingsymbol)
+                                    if current_ltp>=entry_price:
+                                        datas['STATUS']='CLOSED'
+                                        datas['EXIT_TIME']=current_time
+                                        datas['EXIT_PRICE']=current_ltp
 
 
-        session.add(new_order)
+                                    if current_ltp<=target_price:
+                                        datas['STATUS']='CLOSED'
+                                        datas['EXIT_PRICE']=current_ltp
+                                        datas['EXIT_TIME']=current_time
+                                    if current_date==expiry:
+                                        if current_time>='15:30':
+                                            datas['STATUS'] ='CLOSED'
+                                            datas['EXIT_PRICE']=current_ltp
+                                            datas['EXIT_TIME']=current_time
 
-        await session.commit()
-        await session.refresh(new_order)
+
+
+                        if  stop_loss is None:
+                            if target_price is not None:
+                                if expiry is not None:
+                                    current_ltp=self.getting_the_live_prices(tradingsymbol)
+                                    
+
+                                    if current_ltp<=target_price:
+                                        datas['STATUS']='CLOSED'
+                                        datas['EXIT_PRICE']=current_ltp
+                                        datas['EXIT_TIME']=current_time
+                                    if current_date==expiry:
+                                        if current_time>='15:30':
+                                            datas['STATUS'] ='CLOSED'
+                                            datas['EXIT_PRICE']=current_ltp
+                                            datas['EXIT_TIME']=current_time
+
+
+                        if  stop_loss is not  None:
+                            if target_price is  None:
+                                if expiry is not None:
+                                    current_ltp=self.getting_the_live_prices(tradingsymbol)
+                                    if current_ltp>=entry_price:
+                                        datas['STATUS']='CLOSED'
+                                        datas['EXIT_TIME']=current_time
+                                        datas['EXIT_PRICE']=current_ltp
+
+                                    if current_date==expiry:
+                                        if current_time>='15:30':
+                                            datas['STATUS'] ='CLOSED'
+                                            datas['EXIT_PRICE']=current_ltp
+                                            datas['EXIT_TIME']=current_time
+
+                        if  stop_loss is not  None:
+                            if target_price is not  None:
+                                if expiry is  None:
+                                    current_ltp=self.getting_the_live_prices(tradingsymbol)
+                                    if current_ltp>=entry_price:
+                                        datas['STATUS']='CLOSED'
+                                        datas['EXIT_TIME']=current_time
+                                        datas['EXIT_PRICE']=current_ltp
+
+
+                                    if current_ltp<=target_price:
+                                        datas['STATUS']='CLOSED'
+                                        datas['EXIT_PRICE']=current_ltp
+                                        datas['EXIT_TIME']=current_time
+                    elif order_type=='BUY':
+
+
+                        if stop_loss is not None:
+                            if target_price is not None:
+                                if expiry is not None:
+                                    current_ltp=self.getting_the_live_prices(tradingsymbol)
+                                    if current_ltp>=entry_price:
+                                        datas['STATUS']='CLOSED'
+                                        datas['EXIT_TIME']=current_time
+                                        datas['EXIT_PRICE']=current_ltp
+
+
+                                    if current_ltp<=target_price:
+                                        datas['STATUS']='CLOSED'
+                                        datas['EXIT_PRICE']=current_ltp
+                                        datas['EXIT_TIME']=current_time
+                                    if current_date==expiry:
+                                        if current_time>='15:30':
+                                            datas['STATUS'] ='CLOSED'
+                                            datas['EXIT_PRICE']=current_ltp
+                                            datas['EXIT_TIME']=current_time
+
+
+
+                        if  stop_loss is None:
+                            if target_price is not None:
+                                if expiry is not None:
+                                    current_ltp=self.getting_the_live_prices(tradingsymbol)
+                                    
+
+                                    if current_ltp<=target_price:
+                                        datas['STATUS']='CLOSED'
+                                        datas['EXIT_PRICE']=current_ltp
+                                        datas['EXIT_TIME']=current_time
+                                    if current_date==expiry:
+                                        if current_time>='15:30':
+                                            datas['STATUS'] ='CLOSED'
+                                            datas['EXIT_PRICE']=current_ltp
+                                            datas['EXIT_TIME']=current_time
+
+
+                        if  stop_loss is not  None:
+                            if target_price is  None:
+                                if expiry is not None:
+                                    current_ltp=self.getting_the_live_prices(tradingsymbol)
+                                    if current_ltp>=entry_price:
+                                        datas['STATUS']='CLOSED'
+                                        datas['EXIT_TIME']=current_time
+                                        datas['EXIT_PRICE']=current_ltp
+
+                                    if current_date==expiry:
+                                        if current_time>='15:30':
+                                            datas['STATUS'] ='CLOSED'
+                                            datas['EXIT_PRICE']=current_ltp
+                                            datas['EXIT_TIME']=current_time
+
+                        if  stop_loss is not  None:
+                            if target_price is not  None:
+                                if expiry is  None:
+                                    current_ltp=self.getting_the_live_prices(tradingsymbol)
+                                    if current_ltp>=entry_price:
+                                        datas['STATUS']='CLOSED'
+                                        datas['EXIT_TIME']=current_time
+                                        datas['EXIT_PRICE']=current_ltp
+
+
+                                    if current_ltp<=target_price:
+                                        datas['STATUS']='CLOSED'
+                                        datas['EXIT_PRICE']=current_ltp
+                                        datas['EXIT_TIME']=current_time
+
+
+
+
+
+                        
+
+
+
+
+                    
+
+
+
+
+
+                    
+                                
+                                
+
+
+
+                    
+
+
+
+
+
 
 
 
