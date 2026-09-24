@@ -183,7 +183,7 @@ class SENSE:
 
 
 
-            elif order_category=='OPTIONS':
+            elif order_category=='FNO':
                 if order_type=='SELL':
                     for new in master_data:
                         new_symbol=new['tradingsymbol']
