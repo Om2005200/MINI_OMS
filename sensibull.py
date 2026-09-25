@@ -46,9 +46,6 @@ http_client = httpx.AsyncClient()
 pwd_context=CryptContext(schemes=['bcrypt'],deprecated='auto')
 
 
-test_hash = pwd_context.hash("test123")
-print("TEST HASH:", test_hash)
-print("TEST VERIFY:", pwd_context.verify("test123", test_hash))
 oauth_2=OAuth2PasswordBearer(tokenUrl='/login')
 
 
@@ -667,10 +664,6 @@ class HELPERS:
         response=execution.scalars().first()
         if response is  not None:
             
-            print("DB HASH:", repr(response.PASSWORD))
-            print("TYPE:", type(response.PASSWORD))
-            print("LENGTH:", len(response.PASSWORD))
-            print("IDENTIFY:", pwd_context.identify(response.PASSWORD))
 
 
             password_get=pwd_context.verify(user_input.PASSWORD,response.PASSWORD)
