@@ -200,10 +200,41 @@ class SENSE:
 
 
                                             return new_order_copy
-                            if old_order_status=='CLOSED':
+
+
+                                        elif old_order_quantity!=quantity:
+                                            for main_load in master_data:
+                                                main_symbol=main_load['tradingsymbol']
+                                                stock_named=main_load['name']
+                                                if main_symbol==symbol:
+
+
+                                                    new_order_={
+                                                        'CLIENT_ID':old_client_id,
+                                                        'STOCK_NAME':stock_named,
+                                                        'TRADINGSYMBOL':main_symbol,
+                                                        'STRIKEPRICE':main_load['strikeprice'],
+                                                        'EXPIRY':main_load['expiry'],
+                                                        'QUANTITY':main_load['quantity'],
+                                                        'ENTRY_PRICE':main_load['entry_price'],
+                                                        'EXIT_PRICE':main_load['exit_price'],
+                                                        'STATUS':main_load['status'],
+                                                        'STOP_LOSS':exit_price,
+                                                        'STATUS':'OPEN',
+                                                        'INSTRUMENT_TYPE':main_load['instrumenttype'],
+                                                        'EXHCHANGE_SEGMENT':main_load['exch_seg'],
+                                                        'ORDER_TYPE':main_load['order_type']
+
+
+                                                    }
+                                                    session.add(new_order_)
+                                                    await session.commit()
+                                                    await session.refresh(new_order_)
+                                                    
+                            elif old_order_status=='CLOSED':
 
                                 for master_load in master_data:
-                                    master_symbol=master_load['tradingssymbol']
+                                    master_symbol=master_load['tradingsymbol']
                                     if master_symbol==symbol:
                                         new_order=json.dumps(master_load)
                                         new_order_copy=master_load
@@ -217,6 +248,54 @@ class SENSE:
 
 
                                         return new_order_copy
+                elif order_type=='BUY':
+                    for old_order in master_data:
+                        old_client_id=old_order['CLIENT_ID']
+                        old_order_entry_price=old_order['ENTRY_PRICE']
+                        if old_client_id==client_id:
+                            old_order_staus_id=old_order['STATUS']
+                            if old_order_staus_id=='OPEN':
+                                old_order_typed=old_order['ORDER_TYPE']
+                                if old_order_typed=='SELL':
+
+                                    old_order_tradingsymbol=old_order['TRADINGSYMBOL']
+                                    if old_order_tradingsymbol==symbol:
+                                        old_order_size=old_order['QUANTITY']
+                                        current_exit_price=self.getting_the_live_prices(old_order_tradingsymbol)
+                                        
+
+                                        if old_order_size==quantity:
+
+                                            old_order['STATUS']='CLOSED'
+                                            old_order['EXIT_TIME']=datetime.now()
+                                            old_order['EXIT_PRICE']=current_exit_price
+                                            updated_order_copy={
+                                                'SYMBOL':old_order_tradingsymbol,
+                                                'ENTRY_PRICE':old_order_entry_price,
+                                                'EXIT_PRICE':current_exit_price,
+                                                'EXIT_TIME':datetime.now(),
+                                                
+                                            }
+                                            session.add(old_order)
+                                            await session.commit()
+                                            await session.refresh(old_order)
+                                            return updated_order_copy
+
+
+
+
+
+
+
+                                        
+
+
+
+                                       
+
+
+
+                                        
 
 
 
