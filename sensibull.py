@@ -43,8 +43,13 @@ router=APIRouter()
 engine=create_async_engine(database_url,echo=True)
 http_client = httpx.AsyncClient()
 
-pwd_context=CryptContext(schemes=['bcrypt'],depriciated='auto')
-oauth_2=OAuth2PasswordBearer(token_url='/login')
+pwd_context=CryptContext(schemes=['bcrypt'],deprecated='auto')
+
+
+test_hash = pwd_context.hash("test123")
+print("TEST HASH:", test_hash)
+print("TEST VERIFY:", pwd_context.verify("test123", test_hash))
+oauth_2=OAuth2PasswordBearer(tokenUrl='/login')
 
 
 
@@ -230,7 +235,7 @@ class SENSE:
                                                     session.add(new_order_)
                                                     await session.commit()
                                                     await session.refresh(new_order_)
-                                                    
+
                             elif old_order_status=='CLOSED':
 
                                 for master_load in master_data:
@@ -648,7 +653,8 @@ class HELPERS:
 
 
     async def creating_the_new_user(self,db_model:USERACCOUNT,session:AsyncSession):
-        create_user=USERDATABASE(NAME=db_model.NAME,PASSWORD=pwd_context.hash(db_model.PASSWORD))
+        create_user=USERDATABASE(NAME=db_model.NAME,PASSWORD=pwd_context.hash(db_model.PASSWORD),EMAIL_ID=db_model.EMAIL_ID,CONTACT_NO=db_model.CONTACT_NO,CLIENT_ID=db_model.CLIENT_ID)
+
         session.add(create_user)
         await session.commit()
         await session.refresh(create_user)
@@ -656,12 +662,18 @@ class HELPERS:
 
 
     async def verify_the_user(self,user_input:USERACCOUNT,session:AsyncSession):
-        validate_user=select(USERDATABASE).where(USERDATABASE.NAME==user_input.NAME)
+        validate_user=select(USERDATABASE).where(USERDATABASE.NAME==user_input.NAME,USERDATABASE.CONTACT_NO==user_input.CONTACT_NO)
         execution=await session.execute(validate_user)
-        response=execution.first()
+        response=execution.scalars().first()
         if response is  not None:
+            
+            print("DB HASH:", repr(response.PASSWORD))
+            print("TYPE:", type(response.PASSWORD))
+            print("LENGTH:", len(response.PASSWORD))
+            print("IDENTIFY:", pwd_context.identify(response.PASSWORD))
 
-            password_get=pwd_context.verify(user_input.PASSWORD,response['PASSWORD'])
+
+            password_get=pwd_context.verify(user_input.PASSWORD,response.PASSWORD)
             if password_get is True:
 
 
@@ -853,7 +865,7 @@ async def create_account(user_model:USERACCOUNT,session:AsyncSession=Depends(get
             })
 
 
-@router.get('/user/login/')
+@router.post('/user/login/')
 
 async def user_login(user_model:USERACCOUNT,session:AsyncSession=Depends(get_session)):
     user_verify=await h.verify_the_user(user_model,session)
