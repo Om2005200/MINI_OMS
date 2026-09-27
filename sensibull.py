@@ -139,6 +139,7 @@ class SENSE:
     
     async def placing_the_orders(self,orders:list[dict],session:AsyncSession):
         master_orders=orders
+        current_date=''
         old_orders=select(ORDER_DATABASE)
         execution=await session.execute(old_orders)
         response=execution.scalars().all()
@@ -201,7 +202,7 @@ class SENSE:
 
 
 
-                                            return new_order_copy
+                                           # return new_order_copy
 
 
                                         elif old_order_quantity!=quantity:
@@ -225,13 +226,35 @@ class SENSE:
                                                         'STATUS':'OPEN',
                                                         'INSTRUMENT_TYPE':main_load['instrumenttype'],
                                                         'EXHCHANGE_SEGMENT':main_load['exch_seg'],
-                                                        'ORDER_TYPE':main_load['order_type']
+                                                        'ORDER_TYPE':order_type
 
 
                                                     }
                                                     session.add(new_order_)
                                                     await session.commit()
                                                     await session.refresh(new_order_)
+                                    elif old_order_type=='SELL':
+                                        for ex in master_data:
+                                            ex_tradingsymbol=ex['tradingsymbol']
+                                            if ex_tradingsymbol==symbol:
+                                                new_order={
+                                                    'CLIENT_ID':client_id,
+                                                    'STOCK_NAME':ex['name'],
+                                                    'TRADINGSYMBOL':ex['tradingsymbol'],
+                                                    'STRIKEPRICE':ex['strikeprice'],
+                                                    'EXPIRY':ex['expiry'],
+                                                    'QUANTITY':quantity,
+                                                    'ENTRY_PRICE':self.getting_the_live_prices(ex_tradingsymbol),
+                                                    'EXIT_PRICE':exit_price,
+                                                    'STOP_LOSS':stop_loss,
+                                                    'STATUS':'OPEN',
+                                                    'INSTRUMENTTYPE':ex['instrumenttype'],
+                                                    'EXCHANGESEGENT':ex['exch_seg'],
+                                                    'ORDER_TYPE':order_type
+                                                }
+                                                session.add(new_order)
+                                                await session.commit()
+                                                await session.refresh(new_order)
 
                             elif old_order_status=='CLOSED':
 
@@ -249,7 +272,34 @@ class SENSE:
 
 
 
-                                        return new_order_copy
+                        elif old_client_id!=client_id:
+                            for new_cl in master_data:
+                                n_tradingsymbol=new_cl['tradingsymbol']
+                                if n_tradingsymbol==symbol:
+
+
+
+                                    new_order={
+                                        'CLIENT_ID':client_id,
+                                        'STOCK_NAME':new_cl['name'],
+                                        'TRADINGSYMBOL':new_cl['tradingsymbol'],
+                                        'STRIKEPRICE':new_cl['strikeprice'],
+                                        'EXPIRY':new_cl['expiry'],
+                                        'QUANTITY':quantity,
+                                        'ENTRY_PRICE':self.getting_the_live_prices(n_tradingsymbol),
+                                        'EXIT_PRICE':exit_price,
+                                        'STATUS':'OPEN',
+                                        'STOP_LOSS':stop_loss,
+                                        'INSTRUMENTTYPE':new_cl['instrumenttype'],
+                                        'EXCHANGE_SEGMENT':new_cl['exch_seg']
+
+                                    }
+
+                                    session.add(new_order)
+                                    await session.commit()
+                                    await session.refresh(new_order)
+
+                                             
                 elif order_type=='BUY':
                     for old_order in master_data:
                         old_client_id=old_order['CLIENT_ID']
@@ -281,7 +331,139 @@ class SENSE:
                                             session.add(old_order)
                                             await session.commit()
                                             await session.refresh(old_order)
-                                            return updated_order_copy
+                                            #return updated_order_copy
+
+
+
+
+                                        elif old_order_size!=quantity:
+                                            for whole_data in master_data:
+                                                whole_symbol=whole_data['tradingsymbol']
+                                                if whole_symbol==symbol:
+                                                    new_order={
+                                                        'CLIENT_ID':client_id,
+                                                        'STOCK_NAME':whole_symbol['name'],
+                                                        'TRADINGSYMBOL':whole_symbol['tradingsymbol'],
+                                                        'STRIKEPRICE':whole_symbol['strikeprice'],
+                                                        'EXPIRY':whole_symbol['EXPIRY'],
+                                                        'QUANTITY':whole_symbol['QUANTITY'],
+                                                        'ENTRY_PRICE':whole_symbol['ENTRY_PRICE'],
+                                                        'EXIT_PRICE':exit_price,
+                                                        'STATUS':'OPEN',
+                                                        'STOP_LOSS':exit_price,
+                                                        'INSTRUMENT_TYPE':whole_data['instrumenttype'],
+                                                        'EXCHANGE_SEGMENT':whole_data['exch_seg']
+
+                                                    }
+                                                    session.add(new_order)
+                                                    await session.commit()
+                                                    await session.refresh(new_order)
+                                    elif old_order_tradingsymbol!=symbol:
+                                        for new_orde in master_data:
+                                            new_tradingsymbol=new_orde['tradingsymbol']
+                                            if new_tradingsymbol==symbol:
+                                                new_order={
+                                                    'CLIENT_ID':client_id,
+                                                    'STOCK_NAME':new_orde['name'],
+                                                    'TRADINGSYMBOL':new_orde['tradingsymbol'],
+                                                    'STRIKEPRICE':new_orde['strikeprice'],
+                                                    'EXPIRY':new_order['expiry'],
+                                                    'QUANTITY':quantity,
+                                                    'ENTRY_PRICE':self.getting_the_live_prices(new_tradingsymbol),
+                                                    'EXIT_PRICE':exit_price,
+                                                    'STATUS':'OPEN',
+                                                    'STOP_LOSS':stop_loss,
+                                                    'INSTRUMENTTYPE':new_orde['instrumenttype'],
+                                                    'EXCHANGESEGMENT':new_orde['exch_seg'],
+                                                    
+                                                }
+                                                session.add(new_order)
+                                                await session.commit()
+                                                await session.refresh(new_order)
+                                elif order_type=='BUY':
+                                    for newest in master_data:
+                                        newset_date=newest['DATE']
+                                        newest_tradingsymbol=newest['tradingsymbol']
+                                        if current_date==newset_date:
+                                            if newest_tradingsymbol==symbol:
+                                                new_order={
+                                                    'CLIENT_ID':client_id,
+                                                    'STOCK_NAME':newest['name'],
+                                                    'TRADINGSYMBOL':newest['tradingsymbol'],
+                                                    'STRIKEPRICE':newest['strikeprice'],
+                                                    'EXPIRY':newest['expiry'],
+                                                    'QUANTITY':quantity,
+                                                    'ENTRY_PRICE':self.getting_the_live_prices(newest_tradingsymbol),
+                                                    'EXIT_PRICE':exit_price,
+                                                    'STATUS':'OPEN',
+                                                    'STOP_LOSS':stop_loss,
+                                                    'INSTRUMENTTYPE':newest['instrumenttype'],
+                                                    'EXCHANGESEGMENT':newest['exch_seg']
+                                                }
+                                                session.add(new_order)
+                                                await session.commit()
+                                                await session.refresh(new_order)
+                            elif old_order_status=='CLOSED':
+                            
+                                for master_load_ in master_data:
+                                    master_symbol_=master_load_['tradingsymbol']
+                                    if master_symbol_==symbol:
+                                        new_order=json.dumps(master_load_)
+                                        new_order_copy=master_load_
+
+                                        
+                                        session.add(new_order)
+
+                                        await session.commit()
+                                        await session.refresh(new_order)
+
+
+
+                        elif old_client_id!=client_id:
+                            for new_cl_ in master_data:
+                                n_tradingsymbol_=new_cl['tradingsymbol']
+                                if n_tradingsymbol_==symbol:
+
+
+
+                                    new_order={
+                                        'CLIENT_ID':client_id,
+                                        'STOCK_NAME':new_cl_['name'],
+                                        'TRADINGSYMBOL':new_cl_['tradingsymbol'],
+                                        'STRIKEPRICE':new_cl_['strikeprice'],
+                                        'EXPIRY':new_cl_['expiry'],
+                                        'QUANTITY':quantity,
+                                        'ENTRY_PRICE':self.getting_the_live_prices(n_tradingsymbol_),
+                                        'EXIT_PRICE':exit_price,
+                                        'STATUS':'OPEN',
+                                        'STOP_LOSS':stop_loss,
+                                        'INSTRUMENTTYPE':new_cl_['instrumenttype'],
+                                        'EXCHANGE_SEGMENT':new_cl_['exch_seg']
+
+                                    }
+
+                                    session.add(new_order)
+                                    await session.commit()
+                                    await session.refresh(new_order)
+
+
+                                    
+
+
+
+
+
+                            
+                                
+                            
+                                        
+
+
+                                    
+
+
+
+
 
 
 
