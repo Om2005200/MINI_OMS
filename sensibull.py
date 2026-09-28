@@ -437,7 +437,7 @@ class SENSE:
                                         'EXIT_PRICE':exit_price,
                                         'STATUS':'OPEN',
                                         'STOP_LOSS':stop_loss,
-                                        'INSTRUMENTTYPE':new_cl_['instrumenttype'],
+                                        'INSTRUMENT_TYPE':new_cl_['instrumenttype'],
                                         'EXCHANGE_SEGMENT':new_cl_['exch_seg']
 
                                     }
@@ -445,9 +445,277 @@ class SENSE:
                                     session.add(new_order)
                                     await session.commit()
                                     await session.refresh(new_order)
+            elif order_category=='FNO':
+                if order_type=='SELL':
+                
+                    for old_order in response:
+                        if old_order_type=='BUY':
+
+                            old_client_=old_order['CLIENT_ID']
+                            if old_client_==client_id:
+                                if old_order['STATUS']=='OPEN':
+
+                                    if old_order['TRDAINGSYMBOL']==symbol:
+                                        if old_order['QUNATITY']==quantity:
+
+                                            old_order['EXIT_TIME']=datetime.now().strftime()
+                                            old_order['EXIT_PRICE']=self.getting_the_live_prices(old_order['tradingsymbol'])
+                                            old_order['STATUS']='CLOSED'
+                                        elif old_order['QUANTITY']!=quantity:
+                                            for latest_ in master_data:
+                                                latest_tradingsymbol=latest_['tradingsymbol']
+                                                if latest_tradingsymbol==symbol:
+                                                    new_order={
+                                                        'CLIENT_ID':old_client_,
+                                                        'STOCK_NAME':latest_['name'],
+                                                        'TRADINGSYMBOL':latest_['tradingsymbol'],
+                                                        'STRIKEPRICE':latest_['strikeprice'],
+                                                        'EXPIRY':latest_['expiry'],
+                                                        'QUANTITY':quantity,
+                                                        'ENTRY_PRICE':self.getting_the_live_prices(latest_tradingsymbol),
+                                                        'EXIT_PRICE':exit_price,
+                                                        'STATUS':'OPEN',
+                                                        'STOP_LOSS':stop_loss,
+                                                        'INSTRUMENT_TYPE':latest_['instrumenttype'],
+                                                        'EXCHANGE_SEGMENT':latest_['exch_seg']
+                                                    }
+                                                session.add(new_order)
+                                                await session.commit(new_order)
+                                                await session.refresh()
+
+                                    elif old_order['TRADINGSYMBOL']!=symbol:
+                                        for n in  master_data:
+                                            ne_tradingsymbol=n['tradingsymbol']
+                                            if ne_tradingsymbol==symbol:
+                                                new_order={
+                                                    'CLIENT_ID':old_client_,
+                                                    'STOCK_NAME':n['name'],
+                                                    'TRADINGSYMBOL':n['tradingsymbol'],
+                                                    'STRIKEPRICE':n['strikeprice'],
+                                                    'EXPIRY':n['expiry'],
+                                                    'QUANTITY':n['quantity'],
+                                                    'ENTRY_PRICE':self.getting_the_live_prices(ne_tradingsymbol),
+                                                    'EXIT_PRICE':exit_price,
+                                                    'STATUS':'OPEN',
+                                                    'STOP_LOSS':stop_loss,
+                                                    'INSTRUMENT_TYPE':n['instrumenttype'],
+                                                    'EXCHANGE_SEGMENT':n['exch_seg']
+                                                }
+
+
+
+                                                session.add(new_order)
+                                                await session.commit(new_order)
+                                                await session.refresh(new_order)
+                                elif old_order['STATUS']=='CLOSED':
+                                    for m in master_data:
+                                        m_tradingsymbol=m['tradingsymbol']
+                                        if m_tradingsymbol==symbol:
+                                            new_order={
+                                                'CLIENT_ID':client_id,
+                                                'STOCK_NAME':m['name'],
+                                                'TRADINGSYMBOL':m['tradingsymbol'],
+                                                'STRIKEPRICE':m['strikeprice'],
+                                                'EXPIRY':m['expiry'],
+                                                'QUANTITY':quantity,
+                                                'ENTRY_PRICE':self.getting_the_live_prices(m_tradingsymbol),
+                                                'EXIT_PRICE':exit_price,
+                                                'STATUS':'OPEN',
+                                                'STOP_LOSS':stop_loss,
+                                                'INSTRUMENT_TYPE':m['instrumenttype'],
+                                                'EXCHANGE_SEGMENT':m['exch_seg']
+                                            }
+                                            session.add(new_order)
+                                            await session.commiy(new_order)
+                                            await session.refresh()
+
+                                
+                            elif old_client_!=client_id:
+                                for ba in master_data:
+                                    ba_tradingsymbol=ba['tradingsymbol']
+                                    if ba_tradingsymbol==symbol:
+                                        new_order={
+                                            'CLIENT_ID':client_id,
+                                            'STOCK_NAME':ba['name'],
+                                            'TRADINGSYMBOL':ba['tradingsymbol'],
+                                            'STRIKEPRICE':ba['strikeprice'],
+                                            'EXPIRY':ba['expiry'],
+                                            'QUANTITY':quantity,
+                                            'ENTRY_PRICE':self.getting_the_live_prices(ba_tradingsymbol),
+                                            'EXIT_PRICE':exit_price,
+                                            'STATUS':'OPEN',
+                                            'STOP_LOSS':stop_loss,
+                                            'INSTRUMENT_TYPE':ba['instrumenttype'],
+                                            'EXCHANGE_SEGMENT':ba['exch_seg']
+                                        }
+                                        session.add(new_order)
+                                        await session.commit(new_order)
+                                        await session.refresh(new_order)
+                        elif old_order_type=='SELL':
+                            for k in master_data:
+                                k_tradingsymbol=k['tradingsymbol']
+                                if k_tradingsymbol==symbol:
+                                    new_order={
+                                        'CLIENT_ID':client_id,
+                                        'STOCK_NAME':k['name'],
+                                        'TRADINGSYMBOL':k['tradingsymbol'],
+                                        'STRIKEPRICE':k['strikeprice'],
+                                        'EXPIRY':k['expiry'],
+                                        'QUANTITY':quantity,
+                                        'ENTRY_PRICE':self.getting_the_live_prices(k_tradingsymbol),
+                                        'EXIT_PRICE':exit_price,
+                                        'STATUS':'OPEN',
+                                        'STOP_LOSS':stop_loss,
+                                        'INSTRUMENT_TYPE':k['instrumenttype'],
+                                        'EXHCNAGE_SEGMENT':k['exch_seg']
+                                    }
+                                    session.add(new_order)
+                                    await session.commit(new_order)
+                                    await session.refresh()
+                if order_type=='SELL':
+                                
+                    for old_order__ in response:
+                        if old_order_type=='BUY':
+
+                            old_client_=old_order__['CLIENT_ID']
+                            if old_client_==client_id:
+                                if old_order__['STATUS']=='OPEN':
+
+                                    if old_order__['TRDAINGSYMBOL']==symbol:
+                                        if old_order__['QUNATITY']==quantity:
+
+                                            old_order__['EXIT_TIME']=datetime.now().strftime()
+                                            old_order__['EXIT_PRICE']=self.getting_the_live_prices(old_order__['tradingsymbol'])
+                                            old_order__['STATUS']='CLOSED'
+                                        elif old_order__['QUANTITY']!=quantity:
+                                            for latest_ in master_data:
+                                                latest_tradingsymbol=latest_['tradingsymbol']
+                                                if latest_tradingsymbol==symbol:
+                                                    new_order={
+                                                        'CLIENT_ID':old_client_,
+                                                        'STOCK_NAME':latest_['name'],
+                                                        'TRADINGSYMBOL':latest_['tradingsymbol'],
+                                                        'STRIKEPRICE':latest_['strikeprice'],
+                                                        'EXPIRY':latest_['expiry'],
+                                                        'QUANTITY':quantity,
+                                                        'ENTRY_PRICE':self.getting_the_live_prices(latest_tradingsymbol),
+                                                        'EXIT_PRICE':exit_price,
+                                                        'STATUS':'OPEN',
+                                                        'STOP_LOSS':stop_loss,
+                                                        'INSTRUMENT_TYPE':latest_['instrumenttype'],
+                                                        'EXCHANGE_SEGMENT':latest_['exch_seg']
+                                                    }
+                                                session.add(new_order)
+                                                await session.commit(new_order)
+                                                await session.refresh()
+
+                                    elif old_order__['TRADINGSYMBOL']!=symbol:
+                                        for n in  master_data:
+                                            ne_tradingsymbol=n['tradingsymbol']
+                                            if ne_tradingsymbol==symbol:
+                                                new_order={
+                                                    'CLIENT_ID':old_client_,
+                                                    'STOCK_NAME':n['name'],
+                                                    'TRADINGSYMBOL':n['tradingsymbol'],
+                                                    'STRIKEPRICE':n['strikeprice'],
+                                                    'EXPIRY':n['expiry'],
+                                                    'QUANTITY':n['quantity'],
+                                                    'ENTRY_PRICE':self.getting_the_live_prices(ne_tradingsymbol),
+                                                    'EXIT_PRICE':exit_price,
+                                                    'STATUS':'OPEN',
+                                                    'STOP_LOSS':stop_loss,
+                                                    'INSTRUMENT_TYPE':n['instrumenttype'],
+                                                    'EXCHANGE_SEGMENT':n['exch_seg']
+                                                }
+
+
+
+                                                session.add(new_order)
+                                                await session.commit(new_order)
+                                                await session.refresh(new_order)
+                                elif old_order__['STATUS']=='CLOSED':
+                                    for m in master_data:
+                                        m_tradingsymbol=m['tradingsymbol']
+                                        if m_tradingsymbol==symbol:
+                                            new_order={
+                                                'CLIENT_ID':client_id,
+                                                'STOCK_NAME':m['name'],
+                                                'TRADINGSYMBOL':m['tradingsymbol'],
+                                                'STRIKEPRICE':m['strikeprice'],
+                                                'EXPIRY':m['expiry'],
+                                                'QUANTITY':quantity,
+                                                'ENTRY_PRICE':self.getting_the_live_prices(m_tradingsymbol),
+                                                'EXIT_PRICE':exit_price,
+                                                'STATUS':'OPEN',
+                                                'STOP_LOSS':stop_loss,
+                                                'INSTRUMENT_TYPE':m['instrumenttype'],
+                                                'EXCHANGE_SEGMENT':m['exch_seg']
+                                            }
+                                            session.add(new_order)
+                                            await session.commiy(new_order)
+                                            await session.refresh()
+                                            
+                                
+                            elif old_client_!=client_id:
+                                for ba_ in master_data:
+                                    ba_tradingsymbol=ba_['tradingsymbol']
+                                    if ba_tradingsymbol==symbol:
+                                        new_order={
+                                            'CLIENT_ID':client_id,
+                                            'STOCK_NAME':ba_['name'],
+                                            'TRADINGSYMBOL':ba_['tradingsymbol'],
+                                            'STRIKEPRICE':ba_['strikeprice'],
+                                            'EXPIRY':ba_['expiry'],
+                                            'QUANTITY':quantity,
+                                            'ENTRY_PRICE':self.getting_the_live_prices(ba_tradingsymbol),
+                                            'EXIT_PRICE':exit_price,
+                                            'STATUS':'OPEN',
+                                            'STOP_LOSS':stop_loss,
+                                            'INSTRUMENT_TYPE':ba_['instrumenttype'],
+                                            'EXCHANGE_SEGMENT':ba_['exch_seg']
+                                        }
+                                        session.add(new_order)
+                                        await session.commit(new_order)
+                                        await session.refresh(new_order)
+                        elif old_order_type=='SELL':
+                            for k_ in master_data:
+                                k_tradingsymbol=k_['tradingsymbol']
+                                if k_tradingsymbol==symbol:
+                                    new_order={
+                                        'CLIENT_ID':client_id,
+                                        'STOCK_NAME':k_['name'],
+                                        'TRADINGSYMBOL':k_['tradingsymbol'],
+                                        'STRIKEPRICE':k_['strikeprice'],
+                                        'EXPIRY':k_['expiry'],
+                                        'QUANTITY':quantity,
+                                        'ENTRY_PRICE':self.getting_the_live_prices(k_tradingsymbol),
+                                        'EXIT_PRICE':exit_price,
+                                        'STATUS':'OPEN',
+                                        'STOP_LOSS':stop_loss,
+                                        'INSTRUMENT_TYPE':k_['instrumenttype'],
+                                        'EXHCNAGE_SEGMENT':k_['exch_seg']
+                                    }
+                                    session.add(new_order)
+                                    await session.commit(new_order)
+                                    await session.refresh()
+
+
+
+
+                                
+
+
+
+
+
 
 
                                     
+
+
+
+                                    
+
 
 
 
