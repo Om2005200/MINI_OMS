@@ -42,6 +42,12 @@ class DATASET(BaseModel):
     EXCHNAGE_SEGMENT:str
     ISIN_VALUE:str
     ACCESS_TOKENS:str
+
+
+
+class WEB(BaseModel):
+    STOCK_SYMBOL:str
+    CLIENT_ID:str
 # class ORDERPARAM(BaseModel):
 #     ACCESS_TOKEN:str
 #     REFRESH_TOKEN:str

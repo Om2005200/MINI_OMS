@@ -5,13 +5,14 @@ import json
 from datetime import datetime,timedelta
 import time
 from sqlalchemy import text
+from fastapi import WebSocket,WebSocketDisconnect
 
 from  fastapi import FastAPI,APIRouter,HTTPException,status,Depends,BackgroundTasks,Request
 from typing import List,Annotated
 from sqlmodel import select,desc
 from fastapi.responses import JSONResponse
 from sqlmodel import SQLModel
-from models import ORDERPLACING,USERVERIFY,USERACCOUNT,TOKENS,DATASET
+from models import ORDERPLACING,USERVERIFY,USERACCOUNT,TOKENS,DATASET,WEB
 from concurrent.futures import ProcessPoolExecutor
 from sqlmodel import SQLModel
 from sqlalchemy.ext.asyncio import create_async_engine,AsyncSession
@@ -698,6 +699,15 @@ class SENSE:
                                     session.add(new_order)
                                     await session.commit(new_order)
                                     await session.refresh()
+                        
+
+
+
+
+
+
+
+
 
 
 
@@ -950,7 +960,7 @@ class SENSE:
                                         datas['EXIT_PRICE']=current_ltp
                                         datas['EXIT_TIME']=current_time
 
-
+    
 
 
 
@@ -1281,6 +1291,10 @@ class HELPERS:
 
 
 
+        
+
+
+
     
 
 
@@ -1352,6 +1366,35 @@ async def placing_the_router_orders(order_model:List[ORDERPLACING],user_model:TO
         return JSONResponse(content={
             'mesaage':'ORDER_PLACED_SUCCESFULLY',
             
+        })
+
+
+
+
+@router.websocket('/live/data/')
+async def live_websocoket_connection(websocket:WebSocket,model_data:WEB,session:AsyncSession=Depends(get_session)):
+    client_verify=await h.sliding_window_counter(model_data,session)
+    if client_verify is not None:
+
+        master_data=s.getting_the_master_scripts_data()
+        for datas in master_data:
+            symbol=datas['tradingsymbol']
+
+        await websocket.accept()
+        try:
+            while True:
+                mssg=await websocket.receive_text()
+                if mssg==symbol:
+                    live_prices=s.getting_the_live_prices(symbol)
+
+                    await websocket.send_text(live_prices)
+        except WebSocketDisconnect:
+            return JSONResponse(content={
+                'STATUS':'Connection_closed'
+            })
+    else:
+        return JSONResponse(content={
+            'RESPONSE':'PLEASE WAIT FOR SOMETIME YOUR LIMIT EXCEEDED'
         })
 
     
