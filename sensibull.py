@@ -699,9 +699,591 @@ class SENSE:
                                     session.add(new_order)
                                     await session.commit(new_order)
                                     await session.refresh()
+
+
+    async def processing_the_orders(self,session:AsyncSession):
+
+        main_orders=select(ORDER_DATABASE)
+        current_date_time=datetime.now().strftime("")
+        current_time=datetime.now()
+        data_load=await session.execute(main_orders)
+        main_data=data_load.scalars().all()
+        master_data=self.getting_the_master_scripts_data()
+
+
+
+
+        for data in master_data:
+            symbols=data['tradingsymbol']
+
+
+
+        for datas in main_data:
+            stock_name=datas.STOCK_NAME
+            tradingsymbol=datas.TRADINGSYMBOL
+            strikeprice=datas.STRIKEPRICE
+            expiry=datas.EXPIRY
+            quantity=datas.QUANTITY
+            exit_price=datas.EXIT_PRICE
+            entry_price=datas.ENTRY_PRICE
+
+            status=datas.STATUS
+            order_category=datas.ORDER_CATEGORY
+            target_price=datas.TARGET_PRICE
+
+            stop_loss=datas.STOP_LOSS
+            instrument_type=datas.INSTRUMENT_TYPE
+            exchange_segment=datas.EXCHANGE_SEGMENT
+            order_type=datas.ORDER_TYPE
+
+
+
+            if order_category=='DELIVERY':
+
+
+
+                if order_type=='SELL':
+                    if status=='OPEN':
+
+                        if stop_loss is not None:
+                            if target_price is not None:
+                                if expiry is not None:
+
+
+
+
+                                    if tradingsymbol==symbols:
+                                        current_price=self.getting_the_live_prices(tradingsymbol)
+
+                                        if current_price<=target_price:
+                                            data['STATUS']='CLOSED'
+                                            data['EXIT_PRICE']=current_price
+                                            data['EXIT_TIME']=current_date_time
+                                            session.add(data)
+                                            await session.commit(data)
+                                            await session.refresh()
+
+                                        elif current_date_time==data['EXPIRY']:
+                                            if current_time=='15:30':
+
+                                                data['STATUS']='CLOSED'
+                                                data['EXIT_PRICE']=current_price
+                                                data['EXIT_TIME']=current_date_time
+                                                session.add(data)
+                                                await session.commit(data)
+                                                await session.refresh()
+
+
+
+                                        elif current_price>=stop_loss:
+                                            data['STATUS']='CLOSED'
+                                            data['EXIT_PRICE']=current_price
+
+                                            data['EXIT_TIME']=datetime.now()
+                                            session.add(data)
+                                            await session.commit(data)
+                                            await session.refresh()
+                        if stop_loss is not None:
+                            if target_price is not None:
+                                if expiry is None:
+                                    current_price=self.getting_the_live_prices(tradingsymbol)
+
+
+
+                                    if current_price<=target_price:
+                                        data['STATUS']='CLOSED'
+                                        data['EXIT_TIME']=current_date_time
+                                        data['EXIT_PRICE']=current_price
+
+
+
+                                        session.add(data)
+                                        await session.commit(data)
+                                        await session.refresh()
+                                    elif stop_loss>=current_price:
+                                        data['STATUS']='CLOSED'
+                                        data['EXIT_TIME']=current_date_time
+                                        data['EXIT_PRICE']=current_price
+
+
+                                        session.add(data)
+                                        await session.commit(data)
+                                        await session.refresh()
+
+
+                        if stop_loss is not None:
+                            if target_price is None:
+                                if expiry is None:
+
+
+                                    current_price=self.getting_the_live_prices(tradingsymbol) 
+                                    if current_price>=stop_loss:
+                                        data['STATUS']='CLOSED'
+                                        data['EXIT_PRICE']=current_price
+                                        data['EXIT_TIME']=current_date_time
+                                        session.add(data)
+                                        await session.commit(data)
+                                        await session.refresh()
+
+                elif order_type=='BUY':
+                    if status=='OPEN':
+
+                        if stop_loss is not None:
+                            if target_price is not None:
+                                if expiry is not None:
+
+
+
+
+                                    if tradingsymbol==symbols:
+                                        current_price=self.getting_the_live_prices(tradingsymbol)
+
+                                        if current_price<=target_price:
+                                            data['STATUS']='CLOSED'
+                                            data['EXIT_PRICE']=current_price
+                                            data['EXIT_TIME']=current_date_time
+                                            session.add(data)
+                                            await session.commit(data)
+                                            await session.refresh()
+
+                                        elif current_date_time==data['EXPIRY']:
+                                            if current_time=='15:30':
+
+                                                data['STATUS']='CLOSED'
+                                                data['EXIT_PRICE']=current_price
+                                                data['EXIT_TIME']=current_date_time
+
+
+                                                session.add(data)
+                                                await session.commit(data)
+                                                await session.refresh()
+
+
+
+                                        elif current_price>=stop_loss:
+                                            data['STATUS']='CLOSED'
+                                            data['EXIT_PRICE']=current_price
+
+                                            data['EXIT_TIME']=datetime.now()
+
+                                            session.add(data)
+                                            await session.commit(data)
+                                            await session.refresh()
+                        if stop_loss is not None:
+                            if target_price is not None:
+                                if expiry is None:
+                                    current_price=self.getting_the_live_prices(tradingsymbol)
+
+
+
+                                    if current_price<=target_price:
+                                        data['STATUS']='CLOSED'
+                                        data['EXIT_TIME']=current_date_time
+                                        data['EXIT_PRICE']=current_price
+                                        session.add(data)
+                                        await session.commit(data)
+                                        await session.refresh()
+                                    elif stop_loss>=current_price:
+                                        data['STATUS']='CLOSED'
+                                        data['EXIT_TIME']=current_date_time
+                                        data['EXIT_PRICE']=current_price
+                                        session.add(data)
+                                        await session.commit(data)
+                                        await session.refresh()
+
+
+                        if stop_loss is not None:
+                            if target_price is None:
+                                if expiry is None:
+
+
+                                    current_price=self.getting_the_live_prices(tradingsymbol) 
+                                    if current_price>=stop_loss:
+                                        data['STATUS']='CLOSED'
+                                        data['EXIT_PRICE']=current_price
+                                        data['EXIT_TIME']=current_date_time
+
+                                        session.add(data)
+                                        await session.commit(data)
+                                        await session.refresh()
+            elif order_category=='FNO':
+                if instrument_type=='PE':
+
+                    if order_type=='SELL':
+                        if status=='OPEN':
+                            
+
+
+                            if stop_loss is not None:
+                                if target_price is not None:
+                                    if expiry is not None:
+
+
+
+
+                                        if tradingsymbol==symbols:
+                                            current_price=self.getting_the_live_prices(tradingsymbol)
+
+                                            if current_price>=target_price:
+                                                data['STATUS']='CLOSED'
+                                                data['EXIT_PRICE']=current_price
+                                                data['EXIT_TIME']=current_date_time
+                                                session.add(data)
+                                                await session.commit(data)
+                                                await session.refresh()
+
+                                            elif current_date_time==data['EXPIRY']:
+                                                if current_time=='15:30':
+
+                                                    data['STATUS']='CLOSED'
+                                                    data['EXIT_PRICE']=current_price
+                                                    data['EXIT_TIME']=current_date_time
+                                                    session.add(data)
+                                                    await session.commit(data)
+                                                    await session.refresh()
+
+
+
+                                            elif current_price<=stop_loss:
+                                                data['STATUS']='CLOSED'
+                                                data['EXIT_PRICE']=current_price
+
+                                                data['EXIT_TIME']=datetime.now()
+
+
+                                                session.add(data)
+                                                await session.commit(data)
+                                                await session.refresh()
+                            if stop_loss is not None:
+                                if target_price is not None:
+                                    if expiry is None:
+                                        current_price=self.getting_the_live_prices(tradingsymbol)
+
+
+
+                                        if current_price>=target_price:
+                                            data['STATUS']='CLOSED'
+                                            data['EXIT_TIME']=current_date_time
+                                            data['EXIT_PRICE']=current_price
+
+
+                                            session.add(data)
+                                            await session.commit(data)
+                                            await session.refresh()
+                                        elif stop_loss<=current_price:
+                                            data['STATUS']='CLOSED'
+                                            data['EXIT_TIME']=current_date_time
+                                            data['EXIT_PRICE']=current_price
+
+                                            session.add(data)
+                                            await session.commit(data)
+                                            await session.refresh()
+
+
+                            if stop_loss is not None:
+                                if target_price is None:
+                                    if expiry is None:
+
+
+                                        current_price=self.getting_the_live_prices(tradingsymbol) 
+                                        if current_price<=stop_loss:
+                                            data['STATUS']='CLOSED'
+                                            data['EXIT_PRICE']=current_price
+                                            data['EXIT_TIME']=current_date_time
+                                            session.add(data)
+                                            await session.commit(data)
+                                            await session.refresh()
+                    elif order_type=='BUY':
+                        if status=='OPEN':
+                            
+
+
+                            if stop_loss is not None:
+                                if target_price is not None:
+                                    if expiry is not None:
+
+
+
+
+                                        if tradingsymbol==symbols:
+                                            current_price=self.getting_the_live_prices(tradingsymbol)
+
+                                            if current_price<=target_price:
+                                                data['STATUS']='CLOSED'
+                                                data['EXIT_PRICE']=current_price
+                                                data['EXIT_TIME']=current_date_time
+                                                session.add(data)
+                                                await session.commit(data)
+                                                await session.refresh()
+
+                                            elif current_date_time==data['EXPIRY']:
+                                                if current_time=='15:30':
+
+                                                    data['STATUS']='CLOSED'
+                                                    data['EXIT_PRICE']=current_price
+                                                    data['EXIT_TIME']=current_date_time
+                                                    session.add(data)
+                                                    await session.commit(data)
+                                                    await session.refresh()
+
+
+
+                                            elif current_price>=stop_loss:
+                                                data['STATUS']='CLOSED'
+                                                data['EXIT_PRICE']=current_price
+
+                                                data['EXIT_TIME']=datetime.now()
+                                                session.add(data)
+                                                await session.commit(data)
+                                                await session.refresh()
+                            if stop_loss is not None:
+                                if target_price is not None:
+                                    if expiry is None:
+                                        current_price=self.getting_the_live_prices(tradingsymbol)
+
+
+
+                                        if current_price<=target_price:
+                                            data['STATUS']='CLOSED'
+                                            data['EXIT_TIME']=current_date_time
+                                            data['EXIT_PRICE']=current_price
+                                            session.add(data)
+                                            await session.commit(data)
+                                            await session.refresh()
+                                        elif stop_loss>=current_price:
+                                            data['STATUS']='CLOSED'
+                                            data['EXIT_TIME']=current_date_time
+                                            data['EXIT_PRICE']=current_price
+                                            session.add(data)
+                                            await session.commit(data)
+                                            await session.refresh()
+
+
+                            if stop_loss is not None:
+                                if target_price is None:
+                                    if expiry is None:
+
+
+                                        current_price=self.getting_the_live_prices(tradingsymbol) 
+                                        if current_price>=stop_loss:
+                                            data['STATUS']='CLOSED'
+                                            data['EXIT_PRICE']=current_price
+                                            data['EXIT_TIME']=current_date_time
+                                            session.add(data)
+                                            await session.commit(data)
+                                            await session.refresh()
+                elif instrument_type=='CE':
+                
+                    if order_type=='SELL':
+                        if status=='OPEN':
+                            
+
+
+                            if stop_loss is not None:
+                                if target_price is not None:
+                                    if expiry is not None:
+
+
+
+
+                                        if tradingsymbol==symbols:
+                                            current_price=self.getting_the_live_prices(tradingsymbol)
+
+                                            if current_price<=target_price:
+                                                data['STATUS']='CLOSED'
+                                                data['EXIT_PRICE']=current_price
+                                                data['EXIT_TIME']=current_date_time
+                                                session.add(data)
+                                                await session.commit(data)
+                                                await session.refresh()
+
+                                            elif current_date_time==data['EXPIRY']:
+                                                if current_time=='15:30':
+
+                                                    data['STATUS']='CLOSED'
+                                                    data['EXIT_PRICE']=current_price
+                                                    data['EXIT_TIME']=current_date_time
+
+
+                                                    session.add(data)
+                                                    await session.commit(data)
+                                                    await session.refresh()
+
+
+
+                                            elif current_price>=stop_loss:
+                                                data['STATUS']='CLOSED'
+                                                data['EXIT_PRICE']=current_price
+
+                                                data['EXIT_TIME']=datetime.now()
+
+
+                                                session.add(data)
+                                                await session.commit(data)
+                                                await session.refresh()
+                            if stop_loss is not None:
+                                if target_price is not None:
+                                    if expiry is None:
+                                        current_price=self.getting_the_live_prices(tradingsymbol)
+
+
+
+                                        if current_price<=target_price:
+                                            data['STATUS']='CLOSED'
+                                            data['EXIT_TIME']=current_date_time
+                                            data['EXIT_PRICE']=current_price
+
+
+                                            session.add(data)
+                                            await session.commit(data)
+                                            await session.refresh()
+                                        elif stop_loss>=current_price:
+                                            data['STATUS']='CLOSED'
+                                            data['EXIT_TIME']=current_date_time
+                                            data['EXIT_PRICE']=current_price
+
+
+                                            session.add(data)
+                                            await session.commit(data)
+                                            await session.refresh()
+
+
+                            if stop_loss is not None:
+                                if target_price is None:
+                                    if expiry is None:
+
+
+                                        current_price=self.getting_the_live_prices(tradingsymbol) 
+                                        if current_price>=stop_loss:
+                                            data['STATUS']='CLOSED'
+                                            data['EXIT_PRICE']=current_price
+                                            data['EXIT_TIME']=current_date_time
+                                            session.add(data)
+                                            await session.commit(data)
+                                            await session.refresh()
+                    elif order_type=='BUY':
+                        if status=='OPEN':
+                            
+
+
+                            if stop_loss is not None:
+                                if target_price is not None:
+                                    if expiry is not None:
+
+
+
+
+                                        if tradingsymbol==symbols:
+                                            current_price=self.getting_the_live_prices(tradingsymbol)
+
+                                            if current_price>=target_price:
+                                                data['STATUS']='CLOSED'
+                                                data['EXIT_PRICE']=current_price
+                                                data['EXIT_TIME']=current_date_time
+
+
+                                                session.add(data)
+                                                await session.commit(data)
+                                                await session.refresh()
+
+                                            elif current_date_time==data['EXPIRY']:
+                                                if current_time=='15:30':
+
+                                                    data['STATUS']='CLOSED'
+                                                    data['EXIT_PRICE']=current_price
+                                                    data['EXIT_TIME']=current_date_time
+
+
+                                                    session.add(data)
+                                                    await session.commit(data)
+                                                    await session.refresh()
+
+
+
+                                            elif current_price<=stop_loss:
+                                                data['STATUS']='CLOSED'
+                                                data['EXIT_PRICE']=current_price
+
+                                                data['EXIT_TIME']=datetime.now()
+                                                session.add(data)
+                                                await session.commit(data)
+                                                await session.refresh()
+                            if stop_loss is not None:
+                                if target_price is not None:
+                                    if expiry is None:
+                                        current_price=self.getting_the_live_prices(tradingsymbol)
+
+
+
+                                        if current_price>=target_price:
+                                            data['STATUS']='CLOSED'
+                                            data['EXIT_TIME']=current_date_time
+                                            data['EXIT_PRICE']=current_price
+
+
+                                            session.add(data)
+                                            await session.commit(data)
+                                            await session.refresh()
+                                        elif stop_loss<=current_price:
+                                            data['STATUS']='CLOSED'
+                                            data['EXIT_TIME']=current_date_time
+                                            data['EXIT_PRICE']=current_price
+
+                                            session.add(data)
+                                            await session.commit(data)
+                                            await session.refresh()
+
+
+                            if stop_loss is not None:
+                                if target_price is None:
+                                    if expiry is None:
+
+
+                                        current_price=self.getting_the_live_prices(tradingsymbol) 
+                                        if current_price<=stop_loss:
+                                            data['STATUS']='CLOSED'
+                                            data['EXIT_PRICE']=current_price
+                                            data['EXIT_TIME']=current_date_time
+
+
+                                            session.add(data)
+                                            await session.commit(data)
+                                            await session.refresh()
+
+
+
+
+
+                
+
+
+
+                      
+
+        
+
+
+
+                                                
+
+                                    
+                
+
+
+            
+
+
+
+        
+
+
+
+
+
+
                         
 
-
+    
 
 
 
@@ -784,181 +1366,6 @@ class SENSE:
 
 
 
-
-
-    async def processing_the_orders(self,session:AsyncSession):
-        master_data=self.reading_the_master_data()
-        
-
-
-
-
-
-        old_data=select(ORDER_DATABASE)
-        data_accept=await session.execute(old_data)
-        data_load=data_accept.scalars().all()
-        current_date=datetime.now().strftime("%Y-%m-%d")
-        current_time=datetime.now()
-
-        for datas in data_load:
-            tradingsymbol=datas.TRADINGSYMBOL
-            strikeprice=datas.STRIKEPRICE
-            entry_price=datas.ENTRY_PRICE
-            exit_price=datas.EXIT_PRICE
-            quantity=datas.QUANTITY
-            status=datas.STATUS
-            order_type=datas.ORDER_TYPE
-            stop_loss=datas.STOP_LOSS
-            target_price=datas.TARGET_PRICE
-            expiry=datas.EXPIRY
-
-
-
-
-            order_category=datas.ORDER_CATEGORY
-            if order_category=='DELIVERY':
-                if status=='OPEN':
-                    if order_type=='SELL':
-
-                        if stop_loss is not None:
-                            if target_price is not None:
-                                if expiry is not None:
-                                    current_ltp=self.getting_the_live_prices(tradingsymbol)
-                                    if current_ltp>=entry_price:
-                                        datas['STATUS']='CLOSED'
-                                        datas['EXIT_TIME']=current_time
-                                        datas['EXIT_PRICE']=current_ltp
-
-
-                                    if current_ltp<=target_price:
-                                        datas['STATUS']='CLOSED'
-                                        datas['EXIT_PRICE']=current_ltp
-                                        datas['EXIT_TIME']=current_time
-                                    if current_date==expiry:
-                                        if current_time>='15:30':
-                                            datas['STATUS'] ='CLOSED'
-                                            datas['EXIT_PRICE']=current_ltp
-                                            datas['EXIT_TIME']=current_time
-
-
-
-                        if  stop_loss is None:
-                            if target_price is not None:
-                                if expiry is not None:
-                                    current_ltp=self.getting_the_live_prices(tradingsymbol)
-                                    
-
-                                    if current_ltp<=target_price:
-                                        datas['STATUS']='CLOSED'
-                                        datas['EXIT_PRICE']=current_ltp
-                                        datas['EXIT_TIME']=current_time
-                                    if current_date==expiry:
-                                        if current_time>='15:30':
-                                            datas['STATUS'] ='CLOSED'
-                                            datas['EXIT_PRICE']=current_ltp
-                                            datas['EXIT_TIME']=current_time
-
-
-                        if  stop_loss is not  None:
-                            if target_price is  None:
-                                if expiry is not None:
-                                    current_ltp=self.getting_the_live_prices(tradingsymbol)
-                                    if current_ltp>=entry_price:
-                                        datas['STATUS']='CLOSED'
-                                        datas['EXIT_TIME']=current_time
-                                        datas['EXIT_PRICE']=current_ltp
-
-                                    if current_date==expiry:
-                                        if current_time>='15:30':
-                                            datas['STATUS'] ='CLOSED'
-                                            datas['EXIT_PRICE']=current_ltp
-                                            datas['EXIT_TIME']=current_time
-
-                        if  stop_loss is not  None:
-                            if target_price is not  None:
-                                if expiry is  None:
-                                    current_ltp=self.getting_the_live_prices(tradingsymbol)
-                                    if current_ltp>=entry_price:
-                                        datas['STATUS']='CLOSED'
-                                        datas['EXIT_TIME']=current_time
-                                        datas['EXIT_PRICE']=current_ltp
-
-
-                                    if current_ltp<=target_price:
-                                        datas['STATUS']='CLOSED'
-                                        datas['EXIT_PRICE']=current_ltp
-                                        datas['EXIT_TIME']=current_time
-                    elif order_type=='BUY':
-
-
-                        if stop_loss is not None:
-                            if target_price is not None:
-                                if expiry is not None:
-                                    current_ltp=self.getting_the_live_prices(tradingsymbol)
-                                    if current_ltp>=entry_price:
-                                        datas['STATUS']='CLOSED'
-                                        datas['EXIT_TIME']=current_time
-                                        datas['EXIT_PRICE']=current_ltp
-
-
-                                    if current_ltp<=target_price:
-                                        datas['STATUS']='CLOSED'
-                                        datas['EXIT_PRICE']=current_ltp
-                                        datas['EXIT_TIME']=current_time
-                                    if current_date==expiry:
-                                        if current_time>='15:30':
-                                            datas['STATUS'] ='CLOSED'
-                                            datas['EXIT_PRICE']=current_ltp
-                                            datas['EXIT_TIME']=current_time
-
-
-
-                        if  stop_loss is None:
-                            if target_price is not None:
-                                if expiry is not None:
-                                    current_ltp=self.getting_the_live_prices(tradingsymbol)
-                                    
-
-                                    if current_ltp<=target_price:
-                                        datas['STATUS']='CLOSED'
-                                        datas['EXIT_PRICE']=current_ltp
-                                        datas['EXIT_TIME']=current_time
-                                    if current_date==expiry:
-                                        if current_time>='15:30':
-                                            datas['STATUS'] ='CLOSED'
-                                            datas['EXIT_PRICE']=current_ltp
-                                            datas['EXIT_TIME']=current_time
-
-
-                        if  stop_loss is not  None:
-                            if target_price is  None:
-                                if expiry is not None:
-                                    current_ltp=self.getting_the_live_prices(tradingsymbol)
-                                    if current_ltp>=entry_price:
-                                        datas['STATUS']='CLOSED'
-                                        datas['EXIT_TIME']=current_time
-                                        datas['EXIT_PRICE']=current_ltp
-
-                                    if current_date==expiry:
-                                        if current_time>='15:30':
-                                            datas['STATUS'] ='CLOSED'
-                                            datas['EXIT_PRICE']=current_ltp
-                                            datas['EXIT_TIME']=current_time
-
-                        if  stop_loss is not  None:
-                            if target_price is not  None:
-                                if expiry is  None:
-                                    current_ltp=self.getting_the_live_prices(tradingsymbol)
-                                    if current_ltp>=entry_price:
-                                        datas['STATUS']='CLOSED'
-                                        datas['EXIT_TIME']=current_time
-                                        datas['EXIT_PRICE']=current_ltp
-
-
-                                    if current_ltp<=target_price:
-                                        datas['STATUS']='CLOSED'
-                                        datas['EXIT_PRICE']=current_ltp
-                                        datas['EXIT_TIME']=current_time
 
     
 

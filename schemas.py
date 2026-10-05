@@ -18,6 +18,7 @@ class USERDATABASE(SQLModel,table=True):
     EMAIL_ID:str
     CONTACT_NO:str
     PASSWORD:str
+
     
 class ORDER_DATABASE(SQLModel,table=True):
     __tablename__='ORDER_DATABASE'

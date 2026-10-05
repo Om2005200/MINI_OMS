@@ -48,6 +48,10 @@ class DATASET(BaseModel):
 class WEB(BaseModel):
     STOCK_SYMBOL:str
     CLIENT_ID:str
+
+
+
+    
 # class ORDERPARAM(BaseModel):
 #     ACCESS_TOKEN:str
 #     REFRESH_TOKEN:str
