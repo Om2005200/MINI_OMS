@@ -34,12 +34,6 @@ jwt_key='c932c7cad4cf33dd43ca01162474b4bce1ca32a76472ac7fb5de486b81f48cd1'
 jwt_algorithm='HS256'
 mini_sensibull=FastAPI()
 
-
-@mini_sensibull.get("/")
-async def home():
-    return {
-        "message": "MINI SENSIBULL API IS RUNNING"
-    }
 router=APIRouter()
 engine=create_async_engine(database_url,echo=True)
 http_client = httpx.AsyncClient()
@@ -1246,184 +1240,9 @@ class SENSE:
                                             data['EXIT_TIME']=current_date_time
 
 
-                                            session.add(data)
-                                            await session.commit(data)
-                                            await session.refresh()
-
-
-
-
-
-                
-
-
-
-                      
-
-        
-
-
-
-                                                
-
-                                    
-                
-
-
-            
-
-
-
-        
-
-
-
-
-
-
-                        
-
-    
-
-
-
-
-
-
-
-
-
-
-                                
-
-
-
-
-
-
-
-                                    
-
-
-
-                                    
-
-
-
-
-
-
-                            
-                                
-                            
-                                        
-
-
-                                    
-
-
-
-
-
-
-
-
-
-
-
-                                        
-
-
-
-                                       
-
-
-
-                                        
-
-
-
-
-
-
-                               
-
-                        
-                                        
-
-
-
-
-
-                                            
-
-
-
-
-                                 
-
-                        
-
-
-
-
-    
-
-
-
-                        
-
-
-
-
-                    
-
-
-
-
-
-                    
-                                
-                                
-
-
-
-                    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-            
-
-
-
-        
-
-
-
-
-
+                                        session.add(data)
+                                        await session.commit(data)
+                                        await session.refresh()
 
                         
     def ip_file(self):
@@ -1443,39 +1262,7 @@ class SENSE:
             return []
 
 
-        
-                                    
-                
-
-
-
-                                        
-
-                                                
-
-
-            
-
-
-
-
-
-
-                
-
-
-
-
-
-
-
-
-
-
-
-
     
-
     async def getting_the_required_day_data(exchange_segment:str,isin_value:str,stock_name:str):
         
         api='https://api.upstox.com/v3/market-quote/ohlc'
@@ -1654,34 +1441,21 @@ class HELPERS:
                         await mini_sensibull.state.redis.set('client_history',json.dumps(static_ip_file_load),ex=86400)
 
 
-
-            
-            
-
-        
-
-
-
-
-
-            
-
-
-
-
-
     async def decoding_the_access_tokens(self,user_model:TOKENS,session:AsyncSession):
-        payload=jwt.decode(jwt_key,algorithms=[jwt_algorithm])
+        payload = jwt.decode(user_model[0].ACCESS_TOKENS, jwt_key, algorithms=[jwt_algorithm])
+        print("JWT PAYLOAD:", payload)
+        print("TOKEN SUBJECT:", payload.get('sub'))
         client_id=payload.get('sub')
         #contact_no=payload.get('id')
-        main_checker=select(USERDATABASE).where(USERDATABASE.NAME==client_id)
+        main_checker=select(USERDATABASE).where(USERDATABASE.CLIENT_ID==client_id)
         execution=await session.execute(main_checker)
-        response=execution.first()
+        response=execution.scalars().first()
         
         if response is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEASE ENTER VALID TOKENS TO ACCESS THE DATAS')
 
-        
+        return response
+     
 
 
 
@@ -1696,16 +1470,6 @@ class HELPERS:
         if response is not None:
             return True
 
-
-
-        
-
-
-
-    
-
-
-        
 
 
 h=HELPERS()
@@ -1740,7 +1504,8 @@ async def user_login(user_model:USERACCOUNT,session:AsyncSession=Depends(get_ses
                 'STATUS':'SUCCESSFULL',
                 'ACCESS_TOKENS':create_access_tokens
             })
-
+    else:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='PLEAESE ENTER VALID DEATILS')
 
 
    
@@ -1762,8 +1527,8 @@ async def getting_the_daily_data(user_model:DATASET,session:AsyncSession=Depends
 
 @router.post('/order/placing/')
 
-async def placing_the_router_orders(order_model:List[ORDERPLACING],user_model:TOKENS,session:AsyncSession=Depends(get_session)):
-    user_verify=await h.decoding_the_refresh_tokens(user_model.REFRESH_TOKENS)
+async def placing_the_router_orders(order_model:List[ORDERPLACING],session:AsyncSession=Depends(get_session)):
+    user_verify=await h.decoding_the_access_tokens(order_model,session)
     if user_verify is  not None:
         orders=[order.model_dump() for order in order_model]
         order_place=await s.placing_the_orders(orders,session)

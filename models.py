@@ -10,6 +10,7 @@ class ORDERPLACING(BaseModel):
    SYMBOL:str
    QUANTITY:str
    ENTRY_PRICE:str
+   EXIT_PRICE:str
    INSTRUMENT_TYPE:str
    POSITION_TYPE:str
    STOP_LOSS:Optional[str]
@@ -17,6 +18,7 @@ class ORDERPLACING(BaseModel):
    FNO:bool=False
    ORDER_TYPE:str
    ORDER_CATEGORY:str
+   ACCESS_TOKENS:str
    
 
    
@@ -26,11 +28,16 @@ class USERVERIFY(BaseModel):
     PASSWORD:str
     
 class USERACCOUNT(BaseModel):
+    username:str
     CLIENT_ID:str
     NAME:str
     EMAIL_ID:str
     CONTACT_NO:str
     PASSWORD:str
+
+
+
+
 
 class TOKENS(BaseModel):
     ACCESS_TOKENS:str
