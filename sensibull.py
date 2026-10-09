@@ -134,11 +134,18 @@ class SENSE:
     
     async def placing_the_orders(self,orders:list[dict],session:AsyncSession):
         master_orders=orders
-        current_date=''
+       
+        current_date=datetime.now().strftime("%Y-%m-%d")
         old_orders=select(ORDER_DATABASE)
         execution=await session.execute(old_orders)
         response=execution.scalars().all()
         master_data=self.reading_the_master_file()
+
+        print("ENTERED placing_the_orders")
+        print("ORDERS RECEIVED:", master_orders)
+        print("EXISTING ORDERS:", len(response))
+        if len(response) == 0:
+            print("NO EXISTING ORDERS — NEW ORDER PATH")
 
 
             
@@ -162,6 +169,42 @@ class SENSE:
 
             if order_category=='DELIVERY':
                 if order_type=='SELL':
+                    print("ENTERED DELIVERY BRANCH")
+
+
+
+                    if not response:
+                        for master_load in master_data:
+                            master_symbol = master_load['symbol']
+
+                            if master_symbol == symbol:
+                                new_order = ORDER_DATABASE(
+                                    CLIENT_ID=client_id,
+                                    STOCK_NAME=master_load['name'],
+                                    TRADINGSYMBOL=master_load['symbol'],
+                                    STRIKEPRICE=master_load['strike'],
+                                    EXPIRY=master_load['expiry'],
+                                    QUANTITY=quantity,
+                                    #ENTRY_PRICE=self.getting_the_live_prices(symbol),
+                                    ENTRY_PRICE='0',
+                                    ENTRY_TIME=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    EXIT_TIME='',
+                                    EXIT_PRICE=exit_price,
+                                    STATUS='OPEN',
+                                    TOTAL_INVESTED_AMT='',
+                                    STOP_LOSS=stop_loss,
+                                    INSTRUMENT_TYPE=master_load['instrumenttype'],
+                                    EXCHANGE_SEGMENT=master_load['exch_seg'],
+                                    ORDER_TYPE=order_type,
+                                    ORDER_CATEGORY=order_category,
+                                    TARGET_PRICE=''
+
+                                )
+
+                                session.add(new_order)
+                                await session.commit()
+                                await session.refresh(new_order)
+                                return new_order
 
                     for old_set in response:
                         old_client=old_set.CLIENT_ID
@@ -202,7 +245,7 @@ class SENSE:
 
                                         elif old_order_quantity!=quantity:
                                             for main_load in master_data:
-                                                main_symbol=main_load['tradingsymbol']
+                                                main_symbol=main_load['symbol']
                                                 stock_named=main_load['name']
                                                 if main_symbol==symbol:
 
@@ -211,7 +254,7 @@ class SENSE:
                                                         'CLIENT_ID':old_client_id,
                                                         'STOCK_NAME':stock_named,
                                                         'TRADINGSYMBOL':main_symbol,
-                                                        'STRIKEPRICE':main_load['strikeprice'],
+                                                        'STRIKEPRICE':main_load['strike'],
                                                         'EXPIRY':main_load['expiry'],
                                                         'QUANTITY':main_load['quantity'],
                                                         'ENTRY_PRICE':main_load['entry_price'],
@@ -230,13 +273,13 @@ class SENSE:
                                                     await session.refresh(new_order_)
                                     elif old_order_type=='SELL':
                                         for ex in master_data:
-                                            ex_tradingsymbol=ex['tradingsymbol']
+                                            ex_tradingsymbol=ex['symbol']
                                             if ex_tradingsymbol==symbol:
                                                 new_order={
                                                     'CLIENT_ID':client_id,
                                                     'STOCK_NAME':ex['name'],
-                                                    'TRADINGSYMBOL':ex['tradingsymbol'],
-                                                    'STRIKEPRICE':ex['strikeprice'],
+                                                    'TRADINGSYMBOL':ex['symbol'],
+                                                    'STRIKEPRICE':ex['strike'],
                                                     'EXPIRY':ex['expiry'],
                                                     'QUANTITY':quantity,
                                                     'ENTRY_PRICE':self.getting_the_live_prices(ex_tradingsymbol),
@@ -254,10 +297,26 @@ class SENSE:
                             elif old_order_status=='CLOSED':
 
                                 for master_load in master_data:
-                                    master_symbol=master_load['tradingsymbol']
+                                    master_symbol=master_load['symbol']
                                     if master_symbol==symbol:
-                                        new_order=json.dumps(master_load)
-                                        new_order_copy=master_load
+                                        new_order = ORDER_DATABASE(
+                                            CLIENT_ID=client_id,
+                                            STOCK_NAME=master_load['name'],
+                                            TRADINGSYMBOL=master_load['symbol'],
+                                            STRIKEPRICE=master_load['strike'],
+                                            EXPIRY=master_load['expiry'],
+                                            QUANTITY=quantity,
+                                            ENTRY_PRICE=self.getting_the_live_prices(n_tradingsymbol),
+                                            EXIT_PRICE=exit_price,
+                                            STATUS='OPEN',
+                                            STOP_LOSS=stop_loss,
+                                            INSTRUMENT_TYPE=master_load['instrumenttype'],
+                                            EXCHANGE_SEGMENT=master_load['exch_seg'],
+                                            ORDER_TYPE=order_type,
+                                            ORDER_CATEGORY=order_category
+                                        )
+    
+                                            
 
                                         
                                         session.add(new_order)
@@ -277,8 +336,8 @@ class SENSE:
                                     new_order={
                                         'CLIENT_ID':client_id,
                                         'STOCK_NAME':new_cl['name'],
-                                        'TRADINGSYMBOL':new_cl['tradingsymbol'],
-                                        'STRIKEPRICE':new_cl['strikeprice'],
+                                        'TRADINGSYMBOL':new_cl['symbol'],
+                                        'STRIKEPRICE':new_cl['strike'],
                                         'EXPIRY':new_cl['expiry'],
                                         'QUANTITY':quantity,
                                         'ENTRY_PRICE':self.getting_the_live_prices(n_tradingsymbol),
@@ -333,13 +392,13 @@ class SENSE:
 
                                         elif old_order_size!=quantity:
                                             for whole_data in master_data:
-                                                whole_symbol=whole_data['tradingsymbol']
+                                                whole_symbol=whole_data['symbol']
                                                 if whole_symbol==symbol:
                                                     new_order={
                                                         'CLIENT_ID':client_id,
                                                         'STOCK_NAME':whole_symbol['name'],
-                                                        'TRADINGSYMBOL':whole_symbol['tradingsymbol'],
-                                                        'STRIKEPRICE':whole_symbol['strikeprice'],
+                                                        'TRADINGSYMBOL':whole_symbol['symbol'],
+                                                        'STRIKEPRICE':whole_symbol['strike'],
                                                         'EXPIRY':whole_symbol['EXPIRY'],
                                                         'QUANTITY':whole_symbol['QUANTITY'],
                                                         'ENTRY_PRICE':whole_symbol['ENTRY_PRICE'],
@@ -355,13 +414,13 @@ class SENSE:
                                                     await session.refresh(new_order)
                                     elif old_order_tradingsymbol!=symbol:
                                         for new_orde in master_data:
-                                            new_tradingsymbol=new_orde['tradingsymbol']
+                                            new_tradingsymbol=new_orde['symbol']
                                             if new_tradingsymbol==symbol:
                                                 new_order={
                                                     'CLIENT_ID':client_id,
                                                     'STOCK_NAME':new_orde['name'],
-                                                    'TRADINGSYMBOL':new_orde['tradingsymbol'],
-                                                    'STRIKEPRICE':new_orde['strikeprice'],
+                                                    'TRADINGSYMBOL':new_orde['symbol'],
+                                                    'STRIKEPRICE':new_orde['strike'],
                                                     'EXPIRY':new_order['expiry'],
                                                     'QUANTITY':quantity,
                                                     'ENTRY_PRICE':self.getting_the_live_prices(new_tradingsymbol),
@@ -378,14 +437,14 @@ class SENSE:
                                 elif order_type=='BUY':
                                     for newest in master_data:
                                         newset_date=newest['DATE']
-                                        newest_tradingsymbol=newest['tradingsymbol']
+                                        newest_tradingsymbol=newest['symbol']
                                         if current_date==newset_date:
                                             if newest_tradingsymbol==symbol:
                                                 new_order={
                                                     'CLIENT_ID':client_id,
                                                     'STOCK_NAME':newest['name'],
-                                                    'TRADINGSYMBOL':newest['tradingsymbol'],
-                                                    'STRIKEPRICE':newest['strikeprice'],
+                                                    'TRADINGSYMBOL':newest['symbol'],
+                                                    'STRIKEPRICE':newest['strike'],
                                                     'EXPIRY':newest['expiry'],
                                                     'QUANTITY':quantity,
                                                     'ENTRY_PRICE':self.getting_the_live_prices(newest_tradingsymbol),
@@ -401,7 +460,7 @@ class SENSE:
                             elif old_order_status=='CLOSED':
                             
                                 for master_load_ in master_data:
-                                    master_symbol_=master_load_['tradingsymbol']
+                                    master_symbol_=master_load_['symbol']
                                     if master_symbol_==symbol:
                                         new_order=json.dumps(master_load_)
                                         new_order_copy=master_load_
@@ -416,7 +475,7 @@ class SENSE:
 
                         elif old_client_id!=client_id:
                             for new_cl_ in master_data:
-                                n_tradingsymbol_=new_cl['tradingsymbol']
+                                n_tradingsymbol_=new_cl['symbol']
                                 if n_tradingsymbol_==symbol:
 
 
@@ -424,8 +483,8 @@ class SENSE:
                                     new_order={
                                         'CLIENT_ID':client_id,
                                         'STOCK_NAME':new_cl_['name'],
-                                        'TRADINGSYMBOL':new_cl_['tradingsymbol'],
-                                        'STRIKEPRICE':new_cl_['strikeprice'],
+                                        'TRADINGSYMBOL':new_cl_['symbol'],
+                                        'STRIKEPRICE':new_cl_['strike'],
                                         'EXPIRY':new_cl_['expiry'],
                                         'QUANTITY':quantity,
                                         'ENTRY_PRICE':self.getting_the_live_prices(n_tradingsymbol_),
@@ -444,6 +503,7 @@ class SENSE:
                 if order_type=='SELL':
                 
                     for old_order in response:
+                        old_order_type=old_order.ORDER_TYPE
                         if old_order_type=='BUY':
 
                             old_client_=old_order['CLIENT_ID']
@@ -454,17 +514,17 @@ class SENSE:
                                         if old_order['QUNATITY']==quantity:
 
                                             old_order['EXIT_TIME']=datetime.now().strftime()
-                                            old_order['EXIT_PRICE']=self.getting_the_live_prices(old_order['tradingsymbol'])
+                                            old_order['EXIT_PRICE']=self.getting_the_live_prices(old_order['symbol'])
                                             old_order['STATUS']='CLOSED'
                                         elif old_order['QUANTITY']!=quantity:
                                             for latest_ in master_data:
-                                                latest_tradingsymbol=latest_['tradingsymbol']
+                                                latest_tradingsymbol=latest_['symbol']
                                                 if latest_tradingsymbol==symbol:
                                                     new_order={
                                                         'CLIENT_ID':old_client_,
                                                         'STOCK_NAME':latest_['name'],
-                                                        'TRADINGSYMBOL':latest_['tradingsymbol'],
-                                                        'STRIKEPRICE':latest_['strikeprice'],
+                                                        'TRADINGSYMBOL':latest_['symbol'],
+                                                        'STRIKEPRICE':latest_['strike'],
                                                         'EXPIRY':latest_['expiry'],
                                                         'QUANTITY':quantity,
                                                         'ENTRY_PRICE':self.getting_the_live_prices(latest_tradingsymbol),
@@ -480,13 +540,13 @@ class SENSE:
 
                                     elif old_order['TRADINGSYMBOL']!=symbol:
                                         for n in  master_data:
-                                            ne_tradingsymbol=n['tradingsymbol']
+                                            ne_tradingsymbol=n['symbol']
                                             if ne_tradingsymbol==symbol:
                                                 new_order={
                                                     'CLIENT_ID':old_client_,
                                                     'STOCK_NAME':n['name'],
-                                                    'TRADINGSYMBOL':n['tradingsymbol'],
-                                                    'STRIKEPRICE':n['strikeprice'],
+                                                    'TRADINGSYMBOL':n['symbol'],
+                                                    'STRIKEPRICE':n['strike'],
                                                     'EXPIRY':n['expiry'],
                                                     'QUANTITY':n['quantity'],
                                                     'ENTRY_PRICE':self.getting_the_live_prices(ne_tradingsymbol),
@@ -504,12 +564,12 @@ class SENSE:
                                                 await session.refresh(new_order)
                                 elif old_order['STATUS']=='CLOSED':
                                     for m in master_data:
-                                        m_tradingsymbol=m['tradingsymbol']
+                                        m_tradingsymbol=m['symbol']
                                         if m_tradingsymbol==symbol:
                                             new_order={
                                                 'CLIENT_ID':client_id,
                                                 'STOCK_NAME':m['name'],
-                                                'TRADINGSYMBOL':m['tradingsymbol'],
+                                                'TRADINGSYMBOL':m['symbol'],
                                                 'STRIKEPRICE':m['strikeprice'],
                                                 'EXPIRY':m['expiry'],
                                                 'QUANTITY':quantity,
@@ -527,12 +587,12 @@ class SENSE:
                                 
                             elif old_client_!=client_id:
                                 for ba in master_data:
-                                    ba_tradingsymbol=ba['tradingsymbol']
+                                    ba_tradingsymbol=ba['symbol']
                                     if ba_tradingsymbol==symbol:
                                         new_order={
                                             'CLIENT_ID':client_id,
                                             'STOCK_NAME':ba['name'],
-                                            'TRADINGSYMBOL':ba['tradingsymbol'],
+                                            'TRADINGSYMBOL':ba['symbol'],
                                             'STRIKEPRICE':ba['strikeprice'],
                                             'EXPIRY':ba['expiry'],
                                             'QUANTITY':quantity,
@@ -548,12 +608,12 @@ class SENSE:
                                         await session.refresh(new_order)
                         elif old_order_type=='SELL':
                             for k in master_data:
-                                k_tradingsymbol=k['tradingsymbol']
+                                k_tradingsymbol=k['symbol']
                                 if k_tradingsymbol==symbol:
                                     new_order={
                                         'CLIENT_ID':client_id,
                                         'STOCK_NAME':k['name'],
-                                        'TRADINGSYMBOL':k['tradingsymbol'],
+                                        'TRADINGSYMBOL':k['symbol'],
                                         'STRIKEPRICE':k['strikeprice'],
                                         'EXPIRY':k['expiry'],
                                         'QUANTITY':quantity,
@@ -580,16 +640,16 @@ class SENSE:
                                         if old_order__['QUNATITY']==quantity:
 
                                             old_order__['EXIT_TIME']=datetime.now().strftime()
-                                            old_order__['EXIT_PRICE']=self.getting_the_live_prices(old_order__['tradingsymbol'])
+                                            old_order__['EXIT_PRICE']=self.getting_the_live_prices(old_order__['symbol'])
                                             old_order__['STATUS']='CLOSED'
                                         elif old_order__['QUANTITY']!=quantity:
                                             for latest_ in master_data:
-                                                latest_tradingsymbol=latest_['tradingsymbol']
+                                                latest_tradingsymbol=latest_['symbol']
                                                 if latest_tradingsymbol==symbol:
                                                     new_order={
                                                         'CLIENT_ID':old_client_,
                                                         'STOCK_NAME':latest_['name'],
-                                                        'TRADINGSYMBOL':latest_['tradingsymbol'],
+                                                        'TRADINGSYMBOL':latest_['symbol'],
                                                         'STRIKEPRICE':latest_['strikeprice'],
                                                         'EXPIRY':latest_['expiry'],
                                                         'QUANTITY':quantity,
@@ -606,12 +666,12 @@ class SENSE:
 
                                     elif old_order__['TRADINGSYMBOL']!=symbol:
                                         for n in  master_data:
-                                            ne_tradingsymbol=n['tradingsymbol']
+                                            ne_tradingsymbol=n['symbol']
                                             if ne_tradingsymbol==symbol:
                                                 new_order={
                                                     'CLIENT_ID':old_client_,
                                                     'STOCK_NAME':n['name'],
-                                                    'TRADINGSYMBOL':n['tradingsymbol'],
+                                                    'TRADINGSYMBOL':n['symbol'],
                                                     'STRIKEPRICE':n['strikeprice'],
                                                     'EXPIRY':n['expiry'],
                                                     'QUANTITY':n['quantity'],
@@ -630,12 +690,12 @@ class SENSE:
                                                 await session.refresh(new_order)
                                 elif old_order__['STATUS']=='CLOSED':
                                     for m in master_data:
-                                        m_tradingsymbol=m['tradingsymbol']
+                                        m_tradingsymbol=m['symbol']
                                         if m_tradingsymbol==symbol:
                                             new_order={
                                                 'CLIENT_ID':client_id,
                                                 'STOCK_NAME':m['name'],
-                                                'TRADINGSYMBOL':m['tradingsymbol'],
+                                                'TRADINGSYMBOL':m['symbol'],
                                                 'STRIKEPRICE':m['strikeprice'],
                                                 'EXPIRY':m['expiry'],
                                                 'QUANTITY':quantity,
@@ -653,12 +713,12 @@ class SENSE:
                                 
                             elif old_client_!=client_id:
                                 for ba_ in master_data:
-                                    ba_tradingsymbol=ba_['tradingsymbol']
+                                    ba_tradingsymbol=ba_['symbol']
                                     if ba_tradingsymbol==symbol:
                                         new_order={
                                             'CLIENT_ID':client_id,
                                             'STOCK_NAME':ba_['name'],
-                                            'TRADINGSYMBOL':ba_['tradingsymbol'],
+                                            'TRADINGSYMBOL':ba_['symbol'],
                                             'STRIKEPRICE':ba_['strikeprice'],
                                             'EXPIRY':ba_['expiry'],
                                             'QUANTITY':quantity,
@@ -674,12 +734,12 @@ class SENSE:
                                         await session.refresh(new_order)
                         elif old_order_type=='SELL':
                             for k_ in master_data:
-                                k_tradingsymbol=k_['tradingsymbol']
+                                k_tradingsymbol=k_['symbol']
                                 if k_tradingsymbol==symbol:
                                     new_order={
                                         'CLIENT_ID':client_id,
                                         'STOCK_NAME':k_['name'],
-                                        'TRADINGSYMBOL':k_['tradingsymbol'],
+                                        'TRADINGSYMBOL':k_['symbol'],
                                         'STRIKEPRICE':k_['strikeprice'],
                                         'EXPIRY':k_['expiry'],
                                         'QUANTITY':quantity,
@@ -708,7 +768,7 @@ class SENSE:
 
 
         for data in master_data:
-            symbols=data['tradingsymbol']
+            symbols=data['symbol']
 
 
 
@@ -1532,6 +1592,7 @@ async def placing_the_router_orders(order_model:List[ORDERPLACING],session:Async
     if user_verify is  not None:
         orders=[order.model_dump() for order in order_model]
         order_place=await s.placing_the_orders(orders,session)
+        print("ORDER PLACE RESULT:", order_place)
 
         if order_place is None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail='ORDER_NOT_PLACED')
@@ -1550,7 +1611,7 @@ async def live_websocoket_connection(websocket:WebSocket,model_data:WEB,session:
 
         master_data=s.getting_the_master_scripts_data()
         for datas in master_data:
-            symbol=datas['tradingsymbol']
+            symbol=datas['symbol']
 
         await websocket.accept()
         try:
