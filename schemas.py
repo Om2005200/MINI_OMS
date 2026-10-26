@@ -46,6 +46,32 @@ class ORDER_DATABASE(SQLModel,table=True):
 
 
 
+
+    
+class STRADLLE_ORDER_DATABASE(SQLModel,table=True):
+    __tablename__='ORDER_DATABASE'
+    id:Optional[int]=Field(default=None,primary_key=True)
+    CLIENT_ID:str
+    STOCK_NAME:str
+    TRADINGSYMBOL:str
+    STRIKEPRICE:str
+    EXPIRY:str
+    QUANTITY:str
+    EXIT_PRICE:str
+    ENTRY_PRICE:str
+    EXIT_PRICE:str
+    ENTRY_TIME:str
+    EXIT_TIME:str
+    TOTAL_INVESTED_AMT:str
+    STATUS:str
+    TARGET_PRICE:str
+    STOP_LOSS:str
+    INSTRUMENT_TYPE:str
+    EXCHANGE_SEGMENT:str
+    ORDER_TYPE:str
+
+
+
 class INTRADAY_ORDERS(SQLModel,table=True):
     __tablename__='INTRADAY_ORDERS'
     id:Optional[int]=Field(default=None,primary_key=True)

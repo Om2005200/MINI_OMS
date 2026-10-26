@@ -75,6 +75,13 @@ async def shutdown_evenet():
 
 class SENSE:
     """THIS APPLICATION IS SOLELY DEVELOPED  AS A REPLICA OF SENSIBULL"""
+
+
+
+
+    def __init__(self):
+        self.access_token_broker='eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI0NkFZWVAiLCJqdGkiOiI2YTFlNWZjMDJjNjRkNDZlNmMxNzdkYjgiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6dHJ1ZSwiaWF0IjoxNzgwMzc1NDg4LCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3ODA0Mzc2MDB9.-8fHlfcs_2yvoINPQgLr_lq18T2SGEaCpxKZ0tfcuiU'
+        self.ltp_data = {}
     def getting_the_master_scripts_data(self):
         api_endpoint='https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json'
         headers = {
@@ -1304,41 +1311,123 @@ class SENSE:
                                         await session.commit(data)
                                         await session.refresh()
 
-                        
-    def ip_file(self):
-        try:
-            with open(r'C:\Users\dasho\ip_files','r') as x:
-                data=json.load(x)
-                if data is None:
-                    data=[]
-                return data
-
-
-        except FileNotFoundError:
-            with open(r'C:\Users\dasho\ip_files','w') as k:
-                json.dump([],k,indent=4)
-
-
-            return []
-
-
-    
-    async def getting_the_required_day_data(exchange_segment:str,isin_value:str,stock_name:str):
+    async def straddle(self,orders:dict,session:AsyncSession):
+        main_list=[]
+        new_orders=orders
+        main_data=self.reading_the_master_data()
         
-        api='https://api.upstox.com/v3/market-quote/ohlc'
+        for orders in new_orders:
+            new_client=orders['CLIENT_ID']
+            client_symbol=orders['STOCK_NAME']
+            lot_size=orders['LOT_SIZE']
+        master_orders=select(ORDER_DATABASE)
+          
+        execution=await session.execute(master_orders)
+
+        response=execution.scalars().all()
+        for datas in response:
+            master_clients=datas['CLIENT_ID']
+            
+            if master_clients==new_client:
+                if datas['STATUS']=='OPEN':
+                    if datas['TRADINGSYMBOL']==client_symbol:
+                        return None
+
+
+                    for datas in main_data:
+                        main_names=datas['name']
+                        if main_names==client_symbol:
+                           
+                            for k in main_names:
+                                main_list.append(k)
+                            len_of_main_list=len(main_list)
+                            first_value=len_of_main_list-1
+                            second_value=len_of_main_list-2
+                            for values in main_list:
+                                index_finder_second_element=main_list[second_value]
+                                index_finder_first_element=main_list[first_value]
+                            if index_finder_first_element=='P' and index_finder_second_element=='E':
+                                    
+                                if datas['exch_seg']=='NFO':
+                                    
+
+                                        new_order=ORDER_DATABASE(
+                                            CLIENT_ID=new_client,
+                                            STOCK_NAME=main_names,
+                                            TRADINGSYMBOL=datas['tradingsymbol'],
+                                            STRIKEPRICE=datas['strike'],
+                                            EXPIRY=datas['expiry'],
+                                            QUANTITY=lot_size,
+                                            ENTRY_PRICE=self.getting_the_live_prices(datas['tradingsymbol']),
+                                            EXIT_PRICE='NA',
+                                            STATUS='OPEN',
+                                            STOP_LOSS='NA',
+                                            INSTRUMENT_TYPE=datas['instrumenttype'],
+                                            EXCHANGE_SEGMENT=datas['exch_seg']
+                                        )
+                                        session.add(new_order)
+                                        await session.commit(new_order)
+                                        await session.refresh()
+
+
+                            if index_finder_first_element=='C' and index_finder_second_element=='E':
+                                                                
+                                if datas['exch_seg']=='NFO':
+                                        
+                                    
+
+                                        new_order=ORDER_DATABASE(
+                                            CLIENT_ID=new_client,
+                                            STOCK_NAME=main_names,
+                                            TRADINGSYMBOL=datas['tradingsymbol'],
+                                            STRIKEPRICE=datas['strike'],
+                                            EXPIRY=datas['expiry'],
+                                            QUANTITY=lot_size,
+                                            ENTRY_PRICE=self.getting_the_live_prices(datas['tradingsymbol']),
+                                            EXIT_PRICE='NA',
+                                            STATUS='OPEN',
+                                            STOP_LOSS='NA',
+                                            INSTRUMENT_TYPE=datas['instrumenttype'],
+                                            EXCHANGE_SEGMENT=datas['exch_seg']
+                                        )
+                                        session.add(new_order)
+                                        await session.commit(new_order)
+                                        await session.refresh()
+
+
+
+                                        
+
+                                    
+
+
+                    
+
+
+                    
+
+
+
+
+
+        
+   
+    def getting_the_options_contract(self):
+        api_endpoint='https://api.upstox.com/v2/option/contract?instrument_key=NSE_INDEX|Nifty 50&expiry_date=2026-06-02'
         headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': ''
+        'Authorization': 'Bearer {}'.format(self.access_token)
+
         }
-        data={
-            'instrument_key':exchange_segment|isin_value
-        }
-        response= await http_client.get(url=api,headers=headers,params=data)
+        response=rq.get(api_endpoint,headers=headers)
         print(response.status_code)
-        main_data=response.json()
-        redis_load=await mini_sensibull.redis.set(stock_name,main_data,ex=3600)
-        return redis_load
+        data=response.json()
+        print(data)
+        with open('nifty_revised_options_chain.json','w') as g:
+            json.dump(data,g,indent=4)
+        return data
+
 
     
 
