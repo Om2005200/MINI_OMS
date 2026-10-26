@@ -1396,7 +1396,7 @@ class SENSE:
 
 
 
-                                        
+
 
                                     
 
@@ -1690,6 +1690,17 @@ async def placing_the_router_orders(order_model:List[ORDERPLACING],session:Async
             
         })
 
+@router.post('/straddle/')
+async def placing_the_straddle(order_model:List[ORDERPLACING],session:AsyncSession=Depends(get_session)):
+    user_verify=await h.decoding_the_access_tokens(order_model,session)
+    if user_verify is not None:
+        order=[orde.model_dump() for orde in order_model]
+        order_place=await s.straddle(order,session)
+        if order_place is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail='AN OPEN ORDER ALREADY EXISTS IN THE BOOK')
+        return JSONResponse(content={
+            'message':'ORDER PLACED SUCCESSFULLY'
+        })
 
 
 
