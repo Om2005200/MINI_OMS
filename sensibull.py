@@ -16,7 +16,7 @@ from models import ORDERPLACING,USERVERIFY,USERACCOUNT,TOKENS,DATASET,WEB
 from concurrent.futures import ProcessPoolExecutor
 from sqlmodel import SQLModel
 from sqlalchemy.ext.asyncio import create_async_engine,AsyncSession
-from schemas import USERDATABASE,ORDER_DATABASE
+from schemas import USERDATABASE,ORDER_DATABASE,STRADLLE_ORDER_DATABASE
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordRequestForm,OAuth2PasswordBearer,oauth2
 import random
@@ -148,11 +148,6 @@ class SENSE:
         response=execution.scalars().all()
         master_data=self.reading_the_master_file()
 
-        print("ENTERED placing_the_orders")
-        print("ORDERS RECEIVED:", master_orders)
-        print("EXISTING ORDERS:", len(response))
-        if len(response) == 0:
-            print("NO EXISTING ORDERS — NEW ORDER PATH")
 
 
             
@@ -1320,6 +1315,8 @@ class SENSE:
             new_client=orders['CLIENT_ID']
             client_symbol=orders['STOCK_NAME']
             lot_size=orders['LOT_SIZE']
+            stop_loss=orders['STOP_LOSS']
+            action=orders['ACTION']
         master_orders=select(ORDER_DATABASE)
           
         execution=await session.execute(master_orders)
@@ -1351,7 +1348,7 @@ class SENSE:
                                 if datas['exch_seg']=='NFO':
                                     
 
-                                        new_order=ORDER_DATABASE(
+                                        new_order=STRADLLE_ORDER_DATABASE(
                                             CLIENT_ID=new_client,
                                             STOCK_NAME=main_names,
                                             TRADINGSYMBOL=datas['tradingsymbol'],
@@ -1361,7 +1358,9 @@ class SENSE:
                                             ENTRY_PRICE=self.getting_the_live_prices(datas['tradingsymbol']),
                                             EXIT_PRICE='NA',
                                             STATUS='OPEN',
-                                            STOP_LOSS='NA',
+                                            STOP_LOSS=stop_loss,
+                                            OPTION_TYPE='PE',
+                                            ACTION=action,
                                             INSTRUMENT_TYPE=datas['instrumenttype'],
                                             EXCHANGE_SEGMENT=datas['exch_seg']
                                         )
@@ -1386,13 +1385,79 @@ class SENSE:
                                             ENTRY_PRICE=self.getting_the_live_prices(datas['tradingsymbol']),
                                             EXIT_PRICE='NA',
                                             STATUS='OPEN',
-                                            STOP_LOSS='NA',
+                                            STOP_LOSS=stop_loss,
+                                            ACTION=action,
+                                            OPTION_TYPE='CE',
                                             INSTRUMENT_TYPE=datas['instrumenttype'],
                                             EXCHANGE_SEGMENT=datas['exch_seg']
                                         )
                                         session.add(new_order)
                                         await session.commit(new_order)
-                                        await session.refresh()
+                                        await session.refresh()  
+
+    async def pre_processing_the_straddle(self,session:AsyncSession):
+
+
+        master_orders=select(STRADLLE_ORDER_DATABASE)
+        data_load=await session.execute(master_orders)
+        response=data_load.scalars().all()
+        for orders in response:
+            stock_name=orders['STOCK_NAME']
+            tradingsymbol=orders['TRADINGSYMBOL']
+            strikprices=orders['STRIKEPRICE']
+            expiry=orders['EXPIRY']
+            quanitity=orders['QUANTITY']
+            entry_price=orders['ENTRY_PRICE']
+            exit_price=orders['EXIT_PRICE']
+            stop_loss=orders['STOP_LOSS']
+            action=orders['ACTION']
+            option_type=orders['OPTION_TYPE']
+            current_price=''
+            if option_type=='PE':
+
+                if action=='BUY':
+                    if current_price>=stop_loss:
+                        orders['STATUS']='CLOSED'
+                        orders['EXIT_PRICE']=current_price
+                        orders['EXIT_TIME']=datetime.now().strftime("%H:%Y")
+                        
+                        session.add(orders)
+                        await session.commit(orders)
+                        await session.refresh()
+
+                if action=='SELL':
+                    if current_price<=stop_loss:
+                        orders['STATUS']='CLOSED'
+                        orders['EXIT_PRICE']=current_price
+                        orders['EXIT_TIME']=datetime.now().strftime("%H:%Y")
+
+                        session.add(orders)
+                        await session.commit(orders)
+                        await session.refresh()
+
+            elif option_type=='CE':
+                if action=='BUY':
+                    if current_price<=stop_loss:
+                        orders['STATUS']='CLOSED'
+                        orders['EXIT_PRICE']=current_price
+                        orders['EXIT_TIME']=datetime.now().strftime("%H:%Y")
+
+                        session.add(orders)
+                        await session.commit(orders)
+                        await session.refresh()
+
+                elif action=='SELL':
+                    if current_price>=stop_loss:
+                        orders['STATUS']='CLOSED'
+                        orders['EXIT_PRICE']=current_price
+                        orders['EXIT_TIME']=datetime.now().strftime("%H:%Y")
+
+                        session.add(orders)
+                        await session.commit(orders)
+                        await session.refresh()
+
+                
+            
 
 
 

@@ -67,8 +67,10 @@ class STRADLLE_ORDER_DATABASE(SQLModel,table=True):
     TARGET_PRICE:str
     STOP_LOSS:str
     INSTRUMENT_TYPE:str
+    OPTION_TYPE:str
     EXCHANGE_SEGMENT:str
     ORDER_TYPE:str
+    ACTION:str
 
 
 
