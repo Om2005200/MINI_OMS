@@ -1456,7 +1456,37 @@ class SENSE:
                         await session.commit(orders)
                         await session.refresh()
 
-                
+    async def  running_the_websockets(self,session:AsyncSession):
+        data_latency=5
+        master_orders=select(ORDER_DATABASE)
+        data_load=await session.execute(master_orders)
+        main_data=data_load.scalars().all()
+        async with websockets.connect("ws://localhost:8000/ws") as web:
+            while True:
+                for datas in main_data:
+                    client=datas.CLIENT_ID
+
+                    status=datas.STATUS
+
+
+                    response=await web.recv()
+                    mssg_load=json.loads(response)
+
+
+                    for incoms in mssg_load:
+                        client_id=incoms['CLIENT_ID']
+                        if client_id==client:
+                            if status=='OPEN':
+                                await web.send(incoms)
+
+                    await asyncio.sleep(data_latency)
+
+
+    
+            
+
+
+                         
             
 
 
