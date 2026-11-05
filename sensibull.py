@@ -1800,31 +1800,41 @@ async def live_websocoket_connection(websocket:WebSocket,model_data:WEB,session:
         return JSONResponse(content={
             'RESPONSE':'PLEASE WAIT FOR SOMETIME YOUR LIMIT EXCEEDED'
         })
+
+
+
 @router.websocket('/live/positions/')
-async def  running_the_websockets(session:AsyncSession=Depends(get_session)):
-        data_latency=5
-        master_orders=select(ORDER_DATABASE)
-        data_load=await session.execute(master_orders)
-        main_data=data_load.scalars().all()
-        async with websockets.connect("ws://localhost:8000/ws") as web:
-            while True:
-                for datas in main_data:
-                    client=datas.CLIENT_ID
 
-                    status=datas.STATUS
+async def  running_the_websockets(websocket:WebSocket,session:AsyncSession=Depends(get_session)):
+    client_set=[]
+
+    async with websockets.connect('ws://localhost:8000/ws') as wes:
+        await websocket.accept()
+       
+        client_ip_adress=websocket.client.host()
+        client_record={
+            'CLIENT_IP_ADRESS':client_ip_adress
+        }
+        if client_ip_adress not in client_set:
+            client_set.append(client_record)
+        redis_load=await mini_sensibull.state.redis.get('client_ip_data')
+        data_load=json.loads(redis_load)
+        for fg in data_load:
+            client_ip=fg['CLIENT_IP_ADRESS']
+
+            if client_ip==client_ip_adress:
+                client_mssg_load=await wes.recv()
+                if client_mssg_load=='NIFTY':
+                    await wes.send('HELLO')
+
+    
+
+        redis_data=await mini_sensibull.state.redis.set('client_ip_data',json.dumps(client_set),ex=3600)
 
 
-                    response=await web.recv()
-                    mssg_load=json.loads(response)
+        
 
 
-                    for incoms in mssg_load:
-                        client_id=incoms['CLIENT_ID']
-                        if client_id==client:
-                            if status=='OPEN':
-                                await web.send(incoms)
-
-                    await asyncio.sleep(data_latency)
 
 
     
@@ -1837,7 +1847,7 @@ mini_sensibull.include_router(router)
 
 
 
-                            
+              
 
 
 
