@@ -1806,31 +1806,37 @@ async def live_websocoket_connection(websocket:WebSocket,model_data:WEB,session:
 @router.websocket('/live/positions/')
 
 async def  running_the_websockets(websocket:WebSocket,session:AsyncSession=Depends(get_session)):
+    
     client_set=[]
+    main_symbol_list=['NIFTY','BANKNIFTY','SENSEX']
 
     async with websockets.connect('ws://localhost:8000/ws') as wes:
         await websocket.accept()
+        redis_master=[]
        
-        client_ip_adress=websocket.client.host()
+        client_ip_adress=websocket.client.host
         client_record={
             'CLIENT_IP_ADRESS':client_ip_adress
         }
-        if client_ip_adress not in client_set:
+        master_record_load=await mini_sensibull.state.redis.get('client_ip_master_data')
+        data_load=json.loads(master_record_load)
+        for datas in data_load:
+            original_client=datas['CLIENT_IP_ADRESS']
+            redis_master.append(original_client)
+            
+        if client_ip_adress in redis_master:
+            client_mssg=await websocket.receive_text()
+            if client_mssg in main_symbol_list:
+                data_send=''
+                if data_send is not None:
+                    await wes.send(data_send)
+
+        elif client_ip_adress not in redis_master:
             client_set.append(client_record)
-        redis_load=await mini_sensibull.state.redis.get('client_ip_data')
-        data_load=json.loads(redis_load)
-        for fg in data_load:
-            client_ip=fg['CLIENT_IP_ADRESS']
+            await mini_sensibull.state.redis.set('client_ip_master_data',json.dumps(client_set),ex=86400)
 
-            if client_ip==client_ip_adress:
-                client_mssg_load=await wes.recv()
-                if client_mssg_load=='NIFTY':
-                    await wes.send('HELLO')
 
-    
-
-        redis_data=await mini_sensibull.state.redis.set('client_ip_data',json.dumps(client_set),ex=3600)
-
+        
 
         
 
