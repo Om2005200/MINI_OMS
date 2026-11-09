@@ -73,6 +73,11 @@ async def shutdown_evenet():
 
 
 
+redis_client=redis.Redis(host='localhost',port=6379,decode_responses=True)
+
+
+
+
 class SENSE:
     """THIS APPLICATION IS SOLELY DEVELOPED  AS A REPLICA OF SENSIBULL"""
 
@@ -227,6 +232,11 @@ class SENSE:
                                                 'EXIT_PRICE':exit_price,
                                                 'EXIT_TIME':datetime.now()
                                             }
+                                            redis_master_set=await mini_sensibull.state.redis.get('redis_master_client')
+                                            for sde in redis_master_set:
+                                                
+                                                client_websocket_object=sde['CLIENT_WEBSOCKET']
+                                                client_id_sde=sde['CLIENT_ID']
 
 
 
@@ -410,7 +420,9 @@ class SENSE:
                                                         INSTRUMENT_TYPE=whole_data['instrumenttype'],
                                                         EXCHANGE_SEGMENT=whole_data['exch_seg']
 
+
                                                     )
+
                                                     session.add(new_order)
                                                     await session.commit()
                                                     await session.refresh(new_order)
@@ -754,7 +766,9 @@ class SENSE:
                                     )
                                     session.add(new_order)
                                     await session.commit()
-                                    await session.refresh()
+                                    await session.refresh(new_order)
+                                    await mini_sensibull.state.redis.publish('notifications_channel',new_order)
+
 
 
     async def processing_the_orders(self,session:AsyncSession):
@@ -1306,6 +1320,29 @@ class SENSE:
                                         await session.commit(data)
                                         await session.refresh()
 
+    async def the_main_subscriber(self,session:AsyncSession):
+      
+
+
+        publisher_inputs=await mini_sensibull.state.redis.publisher_inputs()
+        await mini_sensibull.state.redis.subscirbe('notifications_channel')
+
+        async for message in publisher_inputs.listen():
+            order_client_id=message['CLIENT_ID']
+            
+
+            client_master_load=await mini_sensibull.state.redis.get('redis_client_master')
+            data_load=json.loads(client_master_load)
+            for datas in data_load:
+                client_id_names=datas['CLIENT_ID']
+                client_websocket_object=datas['CLIENT_WEBSOCKET_OBJECT']
+                if client_id_names==order_client_id:
+                    await client_websocket_object[client_id_names].send_json(message)
+
+
+
+        
+
     async def straddle(self,orders:dict,session:AsyncSession):
         main_list=[]
         new_orders=orders
@@ -1750,6 +1787,10 @@ async def getting_the_daily_data(user_model:DATASET,session:AsyncSession=Depends
 async def placing_the_router_orders(order_model:List[ORDERPLACING],session:AsyncSession=Depends(get_session)):
     user_verify=await h.decoding_the_access_tokens(order_model,session)
     if user_verify is  not None:
+
+
+
+
         orders=[order.model_dump() for order in order_model]
         order_place=await s.placing_the_orders(orders,session)
         print("ORDER PLACE RESULT:", order_place)
@@ -1816,6 +1857,7 @@ async def  running_the_websockets(websocket:WebSocket,session:AsyncSession=Depen
        
         client_ip_adress=websocket.client.host
         client_record={
+            
             'CLIENT_IP_ADRESS':client_ip_adress
         }
         master_record_load=await mini_sensibull.state.redis.get('client_ip_master_data')
@@ -1826,10 +1868,29 @@ async def  running_the_websockets(websocket:WebSocket,session:AsyncSession=Depen
             
         if client_ip_adress in redis_master:
             client_mssg=await websocket.receive_text()
-            if client_mssg in main_symbol_list:
+            client_mssg_load=json.loads(client_mssg)
+            for c in client_mssg_load:
+                symbols_data=c['SYMBOL_NAME']
+                client_id=c['CLIENT_ID']
+                
+            if symbols_data in main_symbol_list:
+
+
                 data_send=''
                 if data_send is not None:
                     await wes.send(data_send)
+
+            redis_master_records={
+                'STATUS':'OPEN',
+
+                'CLIENT_ID':client_id,
+                'CLIENT_WEBSOCKET_OBJECT':websocket
+            }
+
+            await mini_sensibull.state.redis.set('redis_client_master',json.dumps(redis_master_records),ex=86400)
+
+
+
 
         elif client_ip_adress not in redis_master:
             client_set.append(client_record)
@@ -1840,6 +1901,28 @@ async def  running_the_websockets(websocket:WebSocket,session:AsyncSession=Depen
 
         
 
+@router.websocket('/client/connect/')
+
+
+async def connecting_the_client_live(websocket:WebSocket,):
+    client_dataset=[]
+
+
+    async with websockets.connect('ws://localhost:8000/ws') as sew:
+        await websocket.accept()
+        
+        client_ip_address=websocket.client.host
+        if client_ip_address:
+
+            client_master_records={
+                'WEBSOCKET_OBJECT':websocket
+                
+            }
+            if client_master_records not in client_dataset:
+                client_dataset.append(client_master_records)
+                
+
+            await mini_sensibull.state.redis.set('redis_client_master',json.dumps(client_master_records),ex=86400)
 
 
 
