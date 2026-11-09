@@ -1320,7 +1320,7 @@ class SENSE:
                                         await session.commit(data)
                                         await session.refresh()
 
-    async def the_main_subscriber(self,session:AsyncSession):
+    async def the_main_subscriber(self,websocket_object:dict,client_id:str,session:AsyncSession):
       
 
 
@@ -1329,15 +1329,19 @@ class SENSE:
 
         async for message in publisher_inputs.listen():
             order_client_id=message['CLIENT_ID']
+            if client_id==order_client_id:
+                await websocket_object[client_id].send_json(message)
+
+
             
 
-            client_master_load=await mini_sensibull.state.redis.get('redis_client_master')
-            data_load=json.loads(client_master_load)
-            for datas in data_load:
-                client_id_names=datas['CLIENT_ID']
-                client_websocket_object=datas['CLIENT_WEBSOCKET_OBJECT']
-                if client_id_names==order_client_id:
-                    await client_websocket_object[client_id_names].send_json(message)
+            #client_master_load=await mini_sensibull.state.redis.get('redis_client_master')
+            #data_load=json.loads(client_master_load)
+            # for datas in data_load:
+            #     client_id_names=datas['CLIENT_ID']
+            #     client_websocket_object=datas['CLIENT_WEBSOCKET_OBJECT']
+            #     if client_id_names==order_client_id:
+            #         await client_websocket_object[client_id_names].send_json(message)
 
 
 
@@ -1904,25 +1908,46 @@ async def  running_the_websockets(websocket:WebSocket,session:AsyncSession=Depen
 @router.websocket('/client/connect/')
 
 
-async def connecting_the_client_live(websocket:WebSocket,):
+async def connecting_the_client_live(websocket:WebSocket,session:AsyncSession=Depends(get_session)):
     client_dataset=[]
 
 
-    async with websockets.connect('ws://localhost:8000/ws') as sew:
-        await websocket.accept()
-        
-        client_ip_address=websocket.client.host
-        if client_ip_address:
+    
+    await websocket.accept()
+    
+    client_ip_address=websocket.client.host
+    client_mssg=await websocket.receive_text()
+    
+    if client_mssg:
+        mssg_loading=json.loads(client_mssg)
+        for m in mssg_loading:
+            master_client_id=m['CLIENT_ID']
+            
+            
 
-            client_master_records={
-                'WEBSOCKET_OBJECT':websocket
+            # client_master_records={
+            #     'WEBSOCKET_OBJECT':websocket,
+            #     ''
                 
-            }
-            if client_master_records not in client_dataset:
-                client_dataset.append(client_master_records)
-                
+            # }
 
-            await mini_sensibull.state.redis.set('redis_client_master',json.dumps(client_master_records),ex=86400)
+
+
+            # master_data_=await mini_sensibull.state.redis.get('redis_client_master')
+            # main_data_load=json.loads(master_data_)
+            # for data in main_data_load:
+            #     client_id=data['CLIENT_ID']
+            #     if client_id==master_client_id:
+            #         client_master_records={
+            #             'WEBSOCKET_OBJECT':websocket,
+            #             'CLIENT_IP_ADRESS':client_ip_address
+            #         }
+
+
+        await s.the_main_subscriber(session,websocket,master_client_id)
+                    
+
+            #await mini_sensibull.state.redis.set('redis_client_master',json.dumps(client_master_records),ex=86400)
 
 
 
