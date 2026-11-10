@@ -1324,8 +1324,8 @@ class SENSE:
       
 
 
-        publisher_inputs=await mini_sensibull.state.redis.publisher_inputs()
-        await mini_sensibull.state.redis.subscirbe('notifications_channel')
+        publisher_inputs= mini_sensibull.state.redis.pubsub()
+        await publisher_inputs.subscribe('notifications_channel')
 
         async for message in publisher_inputs.listen():
             order_client_id=message['CLIENT_ID']
@@ -1771,19 +1771,19 @@ async def user_login(user_model:USERACCOUNT,session:AsyncSession=Depends(get_ses
 
    
 
-@router.get('/stock/day/data/')
-async def getting_the_daily_data(user_model:DATASET,session:AsyncSession=Depends(get_session)):
-    token_verify=await h.decoding_the_access_tokens(user_model,session)
-    if token_verify is not None:
+# @router.get('/stock/day/data/')
+# async def getting_the_daily_data(user_model:DATASET,session:AsyncSession=Depends(get_session)):
+#     token_verify=await h.decoding_the_access_tokens(user_model,session)
+#     if token_verify is not None:
 
     
-        required_data=await s.getting_the_required_day_data(user_model)
-        if required_data is None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail='NO DATA AVAILAIBLE FOR THE GIVEN ISIN')
-        return JSONResponse({
-            'STATUS':'DATA FETCHED SUCCESFULLY',
-            'DATA':required_data
-        })
+#         required_data=await s.getting_the_required_day_data(user_model)
+#         if required_data is None:
+#             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail='NO DATA AVAILAIBLE FOR THE GIVEN ISIN')
+#         return JSONResponse({
+#             'STATUS':'DATA FETCHED SUCCESFULLY',
+#             'DATA':required_data
+#         })
 
 
 @router.post('/order/placing/')
@@ -1915,7 +1915,7 @@ async def connecting_the_client_live(websocket:WebSocket,session:AsyncSession=De
     
     await websocket.accept()
     
-    client_ip_address=websocket.client.host
+    #client_ip_address=websocket.client.host
     client_mssg=await websocket.receive_text()
     
     if client_mssg:

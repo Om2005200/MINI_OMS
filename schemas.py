@@ -49,7 +49,7 @@ class ORDER_DATABASE(SQLModel,table=True):
 
     
 class STRADLLE_ORDER_DATABASE(SQLModel,table=True):
-    __tablename__='ORDER_DATABASE'
+    __tablename__='STRADDLE_ORDER_DATABASE'
     id:Optional[int]=Field(default=None,primary_key=True)
     CLIENT_ID:str
     STOCK_NAME:str
