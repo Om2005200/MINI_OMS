@@ -767,7 +767,14 @@ class SENSE:
                                     session.add(new_order)
                                     await session.commit()
                                     await session.refresh(new_order)
-                                    await mini_sensibull.state.redis.publish('notifications_channel',new_order)
+                                    await mini_sensibull.state.redis.publish('notifications_channel',json.dumps([{
+                                        'CLIENT_ID':new_order.CLIENT_ID,
+                                        'STOCK_NAME':new_order.STOCK_NAME,
+                                        'TRADINGSYMBOL':new_order.TRADINGSYMBOL,
+                                        'QUANTITY':new_order.QUANTITY,
+                                        'ENTRY_PRICE':new_order.ENTRY_PRICE,
+                                        'STATUS':new_order.STATUS}]))
+                                    
 
 
 
@@ -1320,20 +1327,23 @@ class SENSE:
                                         await session.commit(data)
                                         await session.refresh()
 
-    async def the_main_subscriber(self,websocket_object:dict,client_id:str,session:AsyncSession):
-      
+    async def the_main_subscriber(self,websocket_object:WebSocket,client_id:str,session:AsyncSession):
+        
 
 
         publisher_inputs= mini_sensibull.state.redis.pubsub()
         await publisher_inputs.subscribe('notifications_channel')
 
         async for message in publisher_inputs.listen():
-            order_client_id=message['CLIENT_ID']
-            if client_id==order_client_id:
-                await websocket_object[client_id].send_json(message)
 
 
-            
+
+            main_data=message
+            data=json.loads(main_data)
+            for datas in data:
+                client_id_original=datas['CLIENT_ID']
+                if client_id_original==client_id:
+                    await websocket_object[client_id].send_json(datas)
 
             #client_master_load=await mini_sensibull.state.redis.get('redis_client_master')
             #data_load=json.loads(client_master_load)
